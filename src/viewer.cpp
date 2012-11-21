@@ -104,22 +104,24 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslated(0.0, 0.0, -5.0);
-    glRotated(90, 1, 0, 0);
+    static double r = 0;
+    glRotated(r, 1, 0, 0);
+    r += 2;
 
     /*glBegin(GL_TRIANGLES);
      glVertex3f(0,0,0);
      glVertex3f(1,0,0);
      glVertex3f(0,1,0);
      glEnd();*/
-
     Vector3D p0(-1, 0, 0);
     Vector3D p1(-1, 2, 0);
-    Vector3D p2(1, 0, -1);
+    Vector3D p2(1, 0, -2);
     Vector3D p3(1, 0, 0);
 
-    size_t SEGMENT_COUNT = 10;
+    size_t SEGMENT_COUNT = 20;
     vector<Vector3D> p (SEGMENT_COUNT+1);
     glColor3f(1, 0, 0);
+    glDisable(GL_LIGHTING);
     glBegin(GL_LINE_STRIP);
     for (size_t i = 0; i <= SEGMENT_COUNT; i++) {
         double t = i / (double) SEGMENT_COUNT;
@@ -127,9 +129,10 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
         glVertex3dv(&p[i][0]);
     }
     glEnd();
+    glEnable(GL_LIGHTING);
     glColor3f(0.8, 0.8, 1);
 
-    const double radius = 0.07;
+    const double radius = 0.15;
     Vector3D q0, q1, q2, q3;
     Vector3D s0, s1, s2, s3;
 
@@ -143,19 +146,33 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
             d = p[SEGMENT_COUNT] - p[SEGMENT_COUNT-1];
         else
             d = p[i+1] - p[i-1];
-        d.normalize();
 
-        size_t i_n = min((size_t)1, (size_t)max(SEGMENT_COUNT - 1, i));
+        size_t i_n = max((size_t)1, (size_t)min(SEGMENT_COUNT - 1, i));
         Vector3D n = (p[i_n+1] - p[i_n]).cross(p[i_n] - p[i_n-1]);
         n.normalize();
 
         Vector3D e = d.cross(n);
-        
-        d = radius * d;
+        e.normalize();
+/*
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);
+        glColor3f(0, 1, 0);
+        glVertex3dv(&p[i][0]);
+        glVertex3d(p[i][0] + d[0], p[i][1] + d[1], p[i][2] + d[2]);
+        glColor3f(0, 0, 1);
+        glVertex3dv(&p[i][0]);
+        glVertex3d(p[i][0] + n[0], p[i][1] + n[1], p[i][2] + n[2]);
+        glColor3f(1, 0, 1);
+        glVertex3dv(&p[i][0]);
+        glVertex3d(p[i][0] + e[0], p[i][1] + e[1], p[i][2] + e[2]);
+        glEnd();
+        glColor3f(0.8, 0.8, 1);
+        glEnable(GL_LIGHTING);
+*/
         n = radius * n;
         e = radius * e;
 
-        cout << "d = " << d << " n = " << n << " e = " << e << endl;
+        //cout << "d = " << d << " n = " << n << " e = " << e << endl;
 
         s0 = p[i] + n + e;
         s1 = p[i] - n + e;

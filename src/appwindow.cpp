@@ -5,10 +5,6 @@
 #include "appwindow.hpp"
 #include <iostream>
 
-namespace {
-  int speedIntervals[] = {800, 400, 150};
-}
-
 AppWindow::AppWindow()
 : m_viewer ()
 {
@@ -33,20 +29,12 @@ AppWindow::AppWindow()
   // Put the menubar on the top, and make it as small as possible
   m_vbox.pack_start(m_menubar, Gtk::PACK_SHRINK);
 
-  // Put the viewer below the menubar. pack_start "grows" the widget
-  // by default, so it'll take up the rest of the window.
-  m_viewer.set_size_request(300, 600);
+  set_default_size(500, 500);
   m_vbox.pack_start(m_viewer);
 
   show_all();
   
-  m_timerConnection = Glib::signal_timeout().connect(sigc::mem_fun( this, &AppWindow::update ), speedIntervals[SLOW]);
-}
-
-void AppWindow::setSpeed(Speed s)
-{
-  m_timerConnection.disconnect();
-  m_timerConnection = Glib::signal_timeout().connect(sigc::mem_fun( this, &AppWindow::update ), speedIntervals[s]);
+  m_timerConnection = Glib::signal_timeout().connect(sigc::mem_fun( this, &AppWindow::update ), 20);
 }
 
 bool AppWindow::update()
