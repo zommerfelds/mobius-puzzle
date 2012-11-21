@@ -12,7 +12,7 @@ namespace {
 AppWindow::AppWindow()
 : m_viewer ()
 {
-  set_title("488 Tetrominoes on the Wall");
+  set_title("CS488 Project");
 
   // A utility class for constructing things that go into menus, which
   // we'll set up next.
