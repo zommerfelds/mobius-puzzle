@@ -2,7 +2,8 @@ set(sources
 	main.cpp
 	viewer.cpp
 	appwindow.cpp
-	algebra.cpp)
+	algebra.cpp
+	level.cpp)
 
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}")
 

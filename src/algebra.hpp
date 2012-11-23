@@ -169,6 +169,7 @@ public:
   {
     return sqrt(length2());
   }
+  void rotate(const Vector3D& axis, double angle); // axis must be unit vector
 
   double normalize();
 

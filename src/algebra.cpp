@@ -14,6 +14,14 @@
 
 #include "algebra.hpp"
 
+void Vector3D::rotate(const Vector3D& axis, double angle) {
+  // Rodrigues' rotation formula
+  double cosA = cos(angle);
+  double sinA = sin(angle);
+  Vector3D& v = *this;
+  v = cosA * v + sinA * axis.cross(v) + (1-cosA) * axis.dot(v) * v;
+}
+
 double Vector3D::normalize()
 {
   double denom = 1.0;
