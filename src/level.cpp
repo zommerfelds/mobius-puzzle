@@ -1,9 +1,10 @@
 #include "level.hpp"
-#include "polyroots.hpp"
 #include <iostream>
 #include <boost/foreach.hpp>
+#include <cassert>
 using namespace std;
 
+// get the point on the Bezier curve
 Vector3D bezierPoint(float t, const Vector3D& p0, const Vector3D& p1, const Vector3D& p2, const Vector3D& p3) {
     float u = 1 - t;
     float tt = t * t;
@@ -12,57 +13,31 @@ Vector3D bezierPoint(float t, const Vector3D& p0, const Vector3D& p1, const Vect
     float ttt = tt * t;
     return (uuu * p0) + (3 * uu * t * p1) + (3 * u * tt * p2) + (ttt * p3);
 }
+// get the direction of the curve (first derivative)
 Vector3D bezierDir(float t, const Vector3D& p0, const Vector3D& p1, const Vector3D& p2, const Vector3D& p3) {
     Vector3D d = ((6-3*t)*t-3)*p0 + (t*(9*t-12)+3)*p1 + t*(t*(3*p3-9*p2)+6*p2);
     d.normalize();
     return d;
 }
-/*
-Vector3D bezierNormal(float t, const Vector3D& p0, const Vector3D& p1, const Vector3D& p2, const Vector3D& p3) {
-    Vector3D d = bezierDir(t, p0, p1, p2, p3);
-    d.normalize();
-    double dt = 0.1;
-    Vector3D q0 = bezierPoint(t - dt, p0, p1, p2, p3);
-    Vector3D q1 = bezierPoint(t     , p0, p1, p2, p3);
-    Vector3D q2 = bezierPoint(t + dt, p0, p1, p2, p3);
+// would be nice to have as a symbolic formula
+// get the normal of the plane the line is lying on at a given point
+//Vector3D bezierNormal(float t, const Vector3D& p0, const Vector3D& p1, const Vector3D& p2, const Vector3D& p3);
+// (currently, it just approximates the normals by walking through the line in small steps)
 
-    Vector3D n = (q2 - q1).cross(q1 - q0);
-    n.normalize();
-
-    cout << "t = " << t;
-
-    // p0*(6-6*t) + p1*(18*t-12) + (6-18*t)*p2 + 6*t*p3
-
-    // t * (p0 - 3*p1 + 3*p2 - p3) = p0 -2*p1 + p2
-
-    // if the curve has an inflection point, flip the normals
-    if (t > 0.5 && (p1 - p0).cross(p2 - p0).dot((p2 - p0).cross(p3 - p0)) < 0) {
-        n = -n;
-        cout << " !";
-    }
-    cout << " n = " << n;
-
-    cout << endl;
-
-
-    return n;
-}*/
-
-BezierSegment::BezierSegment(const Vector3D curve[4]) {
+BezierSegment::BezierSegment(const Vector3D curve[4], double a)
+: TwistSegment(a) {
     for (size_t i = 0; i < 4; i++)
         c[i] = curve[i];
-    calc();
 }
 
-void BezierSegment::calc() {
-
+void BezierSegment::calcUntwisted() {
     Vector3D q1 = bezierPoint(-1 / (double) nBezierSegments, c[0], c[1], c[2], c[3]);
     Vector3D q2 = bezierPoint(1 + 1 / (double) nBezierSegments, c[0], c[1], c[2], c[3]);
 
     for (int i = 0; i <= (int) nBezierSegments; i++) {
         double t = i / (double) nBezierSegments;
-        p[i] = bezierPoint(t, c[0], c[1], c[2], c[3]);
-        d[i] = bezierDir(t, c[0], c[1], c[2], c[3]);
+        _p[i] = bezierPoint(t, c[0], c[1], c[2], c[3]);
+        _d[i] = bezierDir(t, c[0], c[1], c[2], c[3]);
     }
 
     Vector3D n_old;
@@ -71,42 +46,110 @@ void BezierSegment::calc() {
         if (i == 0)
             p_prev = &q1;
         else
-            p_prev = &p[i-1];
+            p_prev = &_p[i-1];
         if (i == (int)nBezierSegments)
             p_next = &q2;
         else
-            p_next = &p[i+1];
+            p_next = &_p[i+1];
 
-        n[i] = (*p_prev-p[i]).cross(p[i]-*p_next);
-        n[i].normalize();
-        if (n_old.dot(n[i]) < 0)
-            n[i] = -n[i];
-        n_old = n[i];
+        _n[i] = (*p_prev-_p[i]).cross(_p[i]-*p_next);
+        _n[i].normalize();
+        if (n_old.dot(_n[i]) < 0)
+            _n[i] = -_n[i];
+        n_old = _n[i];
     }
 }
 
+void BezierSegment::calcTwist(double a_begin) {
+    for(size_t i = 0; i < num(); i++) {
+        double t = i / (double) (num() - 1); // XXX
+        _n[i].rotate(_d[i], a_begin + t * a);
+    }
+}
+
+StraightSegment::StraightSegment(const Vector3D ends[2], double a)
+: TwistSegment(a),
+  len (0)
+{
+    for (size_t i = 0; i < 2; i++)
+        c[i] = ends[i];
+}
+
+Vector3D StraightSegment::p(size_t i) const {
+    double t = i / (double) (num() - 1); // XXX
+    return c[0] + t * len * _d;
+}
+
+void StraightSegment::calc(const Vector3D& n_begin) {
+    _d = c[1] - c[0];
+    len = _d.normalize();
+    for(size_t i = 0; i < num(); i++) {
+        double t = i / (double) (num() - 1); // XXX
+        _n[i] = n_begin;
+        _n[i].rotate(_d, t * a);
+    }
+}
+
+
+TSegment::TSegment(const Vector3D ends[2])
+: len (0) {
+    side[0] = NULL; side[1] = NULL; side[2] = NULL; side[3] = NULL;
+    for (size_t i = 0; i < 2; i++)
+        c[i] = ends[i];
+}
+
+void TSegment::calc(const Vector3D& n_begin) {
+    this->n_begin = n_begin;
+    _d = c[1] - c[0];
+    len = _d.normalize();
+}
+
 void Level::calc() {
-    cout << "Calculating angles" << endl;
+    cout << "Calculating level" << endl;
 
     if (segments.empty())
         return;
 
     Segment* seg = segments.front();
-    double a = 0;
     Vector3D n_end;
+
     while (seg != NULL) {
-        seg->a_begin = a;
         if (seg->getType() == BEZIER) {
             BezierSegment* bSeg = static_cast<BezierSegment*>(seg);
-            Vector3D& n_begin = bSeg->n[0];
-            if (seg->prev != NULL)
-                a += acos(n_begin.dot(n_end));
-            n_end = bSeg->n[nBezierSegments];
-            seg->a_begin -= a;
-            a += bSeg->a;
-        }
+            bSeg->calcUntwisted();
 
-        cout << "a_begin = " << seg->a_begin << endl;
+            const Vector3D& n_begin = bSeg->n(0);
+
+            if (seg->prev == NULL) {
+                n_end = n_begin;
+            }
+
+            cout << "n_begin = " << n_begin << ", n_end = " << n_end << endl;
+
+            double a_begin = acos(n_begin.dot(n_end));
+            if (n_begin.cross(n_end).dot(bSeg->d(0)) < 0)
+                a_begin *= -1;
+
+            bSeg->calcTwist(a_begin);
+
+            n_end = bSeg->n(bSeg->num() - 1);
+
+            cout << "a_begin = " << a_begin << endl;
+        } else if (seg->getType() == STRAIGHT) {
+            StraightSegment* sSeg = static_cast<StraightSegment*>(seg);
+            if (seg->prev == NULL) {
+                n_end = (sSeg->c[1] - sSeg->c[0]).cross(Vector3D(1,0,0));
+                cout << "WARNING: not really implemented" << endl;
+            }
+            sSeg->calc(n_end);
+        } else if (seg->getType() == T) {
+            TSegment* tSeg = static_cast<TSegment*>(seg);
+            if (seg->prev == NULL) {
+                n_end = (tSeg->c[1] - tSeg->c[0]).cross(Vector3D(1,0,0));
+                cout << "WARNING: not really implemented" << endl;
+            }
+            tSeg->calc(n_end);
+        }
 
         seg = seg->next;
     }

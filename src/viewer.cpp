@@ -46,10 +46,10 @@ void Viewer::invalidate() {
     //Force a rerender
     Gtk::Allocation allocation = get_allocation();
     get_window()->invalidate_rect(allocation, false);
-
 }
 
-void drawBezierBlock(const BezierSegment& seg) {
+
+void drawCurveBlock(const Curve& c) {
 
     glColor3f(0.8, 0.8, 1);
 
@@ -57,11 +57,213 @@ void drawBezierBlock(const BezierSegment& seg) {
     Vector3D q0, q1, q2, q3;
     Vector3D s0, s1, s2, s3;
 
+    for (size_t i = 0; i < c.num(); i++) {
+        const Vector3D& p = c.p(i);
+        Vector3D n = c.n(i);
+        const Vector3D& d = c.d(i);
+
+        Vector3D e = d.cross(n);
+        e.normalize();
+
+        //if (i == 0) {
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);/*
+        glColor3f(0, 1, 0);
+        glVertex3dv(&p[0]);
+        glVertex3d(p[0] + d[0], p[1] + d[1], p[2] + d[2]);*/
+        glColor3f(0, 0, 1);
+        glVertex3d(p[0], p[1], p[2]);
+        glVertex3d(p[0] + n[0]/2, p[1] + n[1]/2, p[2] + n[2]/2);/*
+        glColor3f(1, 0, 1);
+        glVertex3dv(&p[0]);
+        glVertex3d(p[0] + e[0], p[1] + e[1], p[2] + e[2]);*/
+        glEnd();
+        glColor3f(0.8, 0.8, 1);
+        glEnable(GL_LIGHTING);
+        //}
+
+        n = radius * n;
+        e = radius * e;
+
+        s0 = p + n + e;
+        s1 = p - n + e;
+        s2 = p - n - e;
+        s3 = p + n - e;
+
+        if (i > 0) {
+            glBegin(GL_QUAD_STRIP);
+
+            glNormal3dv(&e[0]);
+            glVertex3dv(&s0[0]);
+            glVertex3dv(&q0[0]);
+            glVertex3dv(&s1[0]);
+            glVertex3dv(&q1[0]);
+            glNormal3d(-n[0],-n[1],-n[2]);
+            glVertex3dv(&s2[0]);
+            glVertex3dv(&q2[0]);
+            glNormal3d(-e[0],-e[1],-e[2]);
+            glVertex3dv(&s3[0]);
+            glVertex3dv(&q3[0]);
+            glNormal3d(n[0],n[1],n[2]);
+            glVertex3dv(&s0[0]);
+            glVertex3dv(&q0[0]);
+
+            glEnd();
+        }
+
+        q0 = s0;
+        q1 = s1;
+        q2 = s2;
+        q3 = s3;
+    }
+}
+
+void drawTBlock(const TSegment& t) {
+
+    glColor3f(0.8, 0.8, 1);
+
+    const double radius = 0.15;
+    Vector3D q0, q1, q2, q3;
+    Vector3D s0, s1, s2, s3;
+
+    Vector3D n = t.n();
+
+    Vector3D e = t.d().cross(n);
+    e.normalize();
+
+    cout << "n = " << n << "; e = " << e << endl;
+
+    n = radius * n;
+    e = radius * e;
+
+    s0 = t.p(0) + n + e;
+    s1 = t.p(0) - n + e;
+    s2 = t.p(0) - n - e;
+    s3 = t.p(0) + n - e;
+
+    q0 = t.p(1) + n + e;
+    q1 = t.p(1) - n + e;
+    q2 = t.p(1) - n - e;
+    q3 = t.p(1) + n - e;
+
+    cout << "s0 = " << s0 << "; q0 = " << q0 << endl;
+    cout << "s1 = " << s0 << "; q1 = " << q0 << endl;
+    cout << "s2 = " << s0 << "; q2 = " << q0 << endl;
+    cout << "s3 = " << s0 << "; q3 = " << q0 << endl;
+
+    glBegin(GL_QUAD_STRIP);
+
+    glNormal3dv(&e[0]);
+    glVertex3dv(&s0[0]);
+    glVertex3dv(&q0[0]);
+    glVertex3dv(&s1[0]);
+    glVertex3dv(&q1[0]);
+    glNormal3d(-n[0],-n[1],-n[2]);
+    glVertex3dv(&s2[0]);
+    glVertex3dv(&q2[0]);
+    glNormal3d(-e[0],-e[1],-e[2]);
+    glVertex3dv(&s3[0]);
+    glVertex3dv(&q3[0]);
+    glNormal3d(n[0],n[1],n[2]);
+    glVertex3dv(&s0[0]);
+    glVertex3dv(&q0[0]);
+
+    glEnd();
+}
+
+#if 0
+Vector3D drawStraightBlock(const StraightSegment& seg, const Vector3D& n_begin) {
+
+    glColor3f(0.8, 0.8, 1);
+
+    const double radius = 0.15;
+    Vector3D q0, q1, q2, q3;
+    Vector3D s0, s1, s2, s3;
+    Vector3D n;
+
+    Vector3D d = seg.p[1] - seg.p[0];
+    d.normalize();
+
+    for (int i = 0; i <= (int) nBezierSegments; i++) {
+        double t = i / (double) nBezierSegments;
+        Vector3D p = seg.p[0] + t * d;
+
+        n = n_begin;
+        n.rotate(d, seg.a_begin + t*seg.a);
+
+        Vector3D e = d.cross(n);
+        e.normalize();
+
+        //if (i == 0) {
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);/*
+        glColor3f(0, 1, 0);
+        glVertex3dv(&p[0]);
+        glVertex3d(p[0] + d[0], p[1] + d[1], p[2] + d[2]);*/
+        glColor3f(0, 0, 1);
+        glVertex3d(p[0], p[1], p[2]);
+        glVertex3d(p[0] + n[0]/2, p[1] + n[1]/2, p[2] + n[2]/2);/*
+        glColor3f(1, 0, 1);
+        glVertex3dv(&p[0]);
+        glVertex3d(p[0] + e[0], p[1] + e[1], p[2] + e[2]);*/
+        glEnd();
+        glColor3f(0.8, 0.8, 1);
+        glEnable(GL_LIGHTING);
+        //}
+
+        n = radius * n;
+        e = radius * e;
+
+        s0 = p + n + e;
+        s1 = p - n + e;
+        s2 = p - n - e;
+        s3 = p + n - e;
+
+        if (i > 0) {
+            glBegin(GL_QUAD_STRIP);
+
+            glNormal3dv(&e[0]);
+            glVertex3dv(&s0[0]);
+            glVertex3dv(&q0[0]);
+            glVertex3dv(&s1[0]);
+            glVertex3dv(&q1[0]);
+            glNormal3d(-n[0],-n[1],-n[2]);
+            glVertex3dv(&s2[0]);
+            glVertex3dv(&q2[0]);
+            glNormal3d(-e[0],-e[1],-e[2]);
+            glVertex3dv(&s3[0]);
+            glVertex3dv(&q3[0]);
+            glNormal3d(n[0],n[1],n[2]);
+            glVertex3dv(&s0[0]);
+            glVertex3dv(&q0[0]);
+
+            glEnd();
+        }
+
+        q0 = s0;
+        q1 = s1;
+        q2 = s2;
+        q3 = s3;
+    }
+    n.normalize();
+    return n;
+}
+
+Vector3D drawBezierBlock(const BezierSegment& seg) {
+
+    glColor3f(0.8, 0.8, 1);
+
+    const double radius = 0.15;
+    Vector3D q0, q1, q2, q3;
+    Vector3D s0, s1, s2, s3;
+
+    Vector3D n;
+
     for (int i = 0; i <= (int) nBezierSegments; i++) {
         double t = i / (double) nBezierSegments;
         const Vector3D& p = seg.p[i];
         const Vector3D& d = seg.d[i];
-        Vector3D n = seg.n[i];
+        n = seg.n[i];
         n.rotate(d, seg.a_begin + t*seg.a);
 
         Vector3D e = d.cross(n);
@@ -118,20 +320,33 @@ void drawBezierBlock(const BezierSegment& seg) {
         q2 = s2;
         q3 = s3;
     }
+    n.normalize();
+    return n;
 }
 
+void drawTSegment(const TSegment& seg) {
+
+}
+#endif
+
 void drawLevel(const Level& level) {
+    Vector3D n_end;
+    const Curve* curve;
     BOOST_FOREACH(Segment* segment, level.segments) {
         switch (segment->getType()) {
         case BEZIER:
-        {
-            const BezierSegment* bSeg = static_cast<BezierSegment*>(segment);
-            drawBezierBlock(*bSeg);
+            curve = static_cast<const Curve*>(static_cast<const BezierSegment*>(segment));
+            /* no break */
+        case STRAIGHT:
+            curve = static_cast<const Curve*>(static_cast<const StraightSegment*>(segment));
+
+            drawCurveBlock(*curve);
             break;
-        }
 
         case T:
         {
+            const TSegment* tSeg = static_cast<TSegment*>(segment);
+            drawTBlock(*tSeg);
             break;
         }
 
@@ -196,38 +411,29 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     Vector3D c1[] = { Vector3D(-1, 0, 0),
                       Vector3D(0, 0, 0),
-                      Vector3D(0, 1, 0),
+                      Vector3D(-1, 1, 0),
+                      Vector3D(0, 1, 0) };
+    Vector3D c2[] = { Vector3D(0, 1, 0),
                       Vector3D(1, 1, 0) };
-    Vector3D c2[] = { Vector3D(1, 1, 0),
-                      Vector3D(2, 1, 0),
-                      Vector3D(2, 1, 1),
-                      Vector3D(1, 1, 1) };
     Vector3D c3[] = { Vector3D(1, 1, 1),
                       Vector3D(0, 1, 1),
                       Vector3D(1, 1, 2),
                       Vector3D(-1, 1, 2) };
     Level level;
-    BezierSegment bSeg1(c1);
-    BezierSegment bSeg2(c2);
-    BezierSegment bSeg3(c3);
-    //bSeg1.a = M_PI*0.6;
-    bSeg1.next = &bSeg2;
+    BezierSegment bSeg1(c1, M_PI*0.5);
+    TSegment tSeg2(c2);
+    StraightSegment sSeg3(c2, 0.5);
+    BezierSegment bSeg3(c3, M_PI*0.5);
+    bSeg1.next = &tSeg2;
     level.segments.push_back(&bSeg1);
-    //bSeg2.a = M_PI_2;
-    bSeg2.prev = &bSeg1;
-    bSeg2.next = &bSeg3;
-    level.segments.push_back(&bSeg2);
-    bSeg3.a = 0;
-    bSeg3.prev = &bSeg2;
-    level.segments.push_back(&bSeg3);
+    tSeg2.prev = &bSeg1;
+    //sSeg2.next = &bSeg3;
+    level.segments.push_back(&tSeg2);
+    //bSeg3.prev = &sSeg2;
+    //level.segments.push_back(&bSeg3);
     level.calc();
 
     drawLevel(level);
-
-    //drawSegment(Vector3D(-1, 0, 0), Vector3D(-1, 2, 0), Vector3D(1, 0, -2), Vector3D(1, 0, 0));
-    // TODO test straight segment
-    //drawSegment(Vector3D(-1, 0, 0), Vector3D(0, 0, 0), Vector3D(0, 1, -1), Vector3D(0, 0, -1));
-    //drawSegment(Vector3D(0, 0, 0), Vector3D(0, -1, 0), Vector3D(0, -1, -1), Vector3D(0, 0, -1));
 
     glFlush();
 
