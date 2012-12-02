@@ -7,6 +7,7 @@
 
 #include <gtkmm.h>
 #include "viewer.hpp"
+#include "game.hpp"
 
 class AppWindow : public Gtk::Window {
 public:
@@ -14,9 +15,12 @@ public:
   
 protected:
   virtual bool on_key_press_event( GdkEventKey *ev );
+  virtual bool on_key_release_event( GdkEventKey *ev );
 
 private:
   
+  bool handleKey(GdkEventKey* ev);
+
   enum Speed { SLOW=0, MEDIUM, FAST };
 
   bool update();
@@ -35,8 +39,10 @@ private:
   
   sigc::connection m_timerConnection;
   
+  Game game;
+
   // The main OpenGL area
-  Viewer m_viewer;
+  Viewer viewer;
 };
 
 #endif

@@ -4,7 +4,8 @@ set(sources
 	appwindow.cpp
 	algebra.cpp
 	level.cpp
-	shader.cpp)
+	shader.cpp
+	game.cpp)
 
 INCLUDE_DIRECTORIES("${CMAKE_CURRENT_SOURCE_DIR}")
 

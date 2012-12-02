@@ -14,7 +14,7 @@ class Game;
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
 public:
-  Viewer();
+  Viewer(Game& game);
   virtual ~Viewer();
 
   // A useful function that forces this widget to rerender. If you
@@ -45,14 +45,18 @@ protected:
   virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 private:
+  bool isGlInit;
+
   void createDrawBuffer();
-  void scene();
+  void scene(bool lighting);
 
   sigc::connection timerConnection;
   ShaderManager shaderMgr;
 
-  GLuint framebufferName;
-  GLuint renderedTexture;
+  Game& game;
+
+  GLuint fbo[2];
+  GLuint tex[2];
 
 };
 
