@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project(game)
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-find")
+
 find_package(PkgConfig)
 # GTKMM
 pkg_check_modules(GTKMM gtkmm-2.4)
@@ -14,8 +16,9 @@ link_directories(${GLEXT_LIBRARY_DIRS})
 
 find_package(GLEW)
 
-#find_package(Boost REQUIRED)
-#include_directories(${Boost_INCLUDE_DIRS})
+set(BOOST_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 #find_package( Boost REQUIRED COMPONENTS program_options regex )
 
