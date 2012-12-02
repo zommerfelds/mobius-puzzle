@@ -37,7 +37,8 @@ int printOglError(const char *file, int line)
     return retCode;
 }
 
-Viewer::Viewer() {
+Viewer::Viewer()
+: isGlInit (false) {
     Glib::RefPtr<Gdk::GL::Config> glconfig;
 
     // Ask for an OpenGL Setup with
@@ -73,7 +74,7 @@ void Viewer::invalidate() {
 }
 
 
-void drawCurveBlock(const Curve& c) {
+void drawCurveBlock(const Curve& c, bool lighting) {
 
     glColor3f(0.8, 0.8, 1);
     glDisable(GL_TEXTURE_2D);
@@ -90,6 +91,7 @@ void drawCurveBlock(const Curve& c) {
         Vector3D e = d.cross(n);
         e.normalize();
 
+#if 0
         //if (i == 0) {
         glDisable(GL_LIGHTING);
         glBegin(GL_LINES);/*
@@ -104,11 +106,14 @@ void drawCurveBlock(const Curve& c) {
         glVertex3d(p[0] + e[0], p[1] + e[1], p[2] + e[2]);*/
         glEnd();
         glColor3f(0.8, 0.8, 1);
-        glEnable(GL_LIGHTING);
         //}
+#endif
 
+        if (lighting)
+            glEnable(GL_LIGHTING);
+        else
+            glDisable(GL_LIGHTING);
 
-        glDisable(GL_LIGHTING);
         glColor3f(1, 0.8, 1);
 
         n = radius * n;
@@ -358,7 +363,7 @@ void drawTSegment(const TSegment& seg) {
 }
 #endif
 
-void drawLevel(const Level& level) {
+void drawLevel(const Level& level, bool lighting) {
     Vector3D n_end;
     const Curve* curve;
     BOOST_FOREACH(Segment* segment, level.segments) {
@@ -369,7 +374,7 @@ void drawLevel(const Level& level) {
         case STRAIGHT:
             curve = static_cast<const Curve*>(static_cast<const StraightSegment*>(segment));
 
-            drawCurveBlock(*curve);
+            drawCurveBlock(*curve, lighting);
             break;
 
         case T:
@@ -420,51 +425,65 @@ void Viewer::on_realize() {
 
     list<string> defines;
     defines.push_back("VERTICAL_BLUR_9");
+    shaderMgr.loadShader("glowV", "data/glow.vert", "data/glow.frag", defines);
+    defines.clear();
+    defines.push_back("HORIZONTAL_BLUR_9");
     shaderMgr.loadShader("glowH", "data/glow.vert", "data/glow.frag", defines);
+
     shaderMgr.useShader("glowH");
-
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+    //glBindTexture(GL_TEXTURE_2D, tex[0]);
+    shaderMgr.setParam("blurSampler", 0);
 
+    shaderMgr.useShader("glowV");
+    //glBindTexture(GL_TEXTURE_2D, tex[1]);
     shaderMgr.setParam("blurSampler", 0);
 
     shaderMgr.useShader(ShaderManager::defaultShader);
+
+    isGlInit = true;
 }
 
 void Viewer::createDrawBuffer() {
 
-    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
-    glGenFramebuffers(1, &framebufferName);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
+    for (size_t i = 0; i < 2; i++) {
 
-    glGenTextures(1, &renderedTexture);
+        // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
+        glGenFramebuffers(1, &fbo[i]);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo[i]);
 
-    // "Bind" the newly created texture : all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+        glGenTextures(1, &tex[i]);
 
-    // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 256, 256, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
+        // "Bind" the newly created texture : all future texture functions will modify this texture
+        glBindTexture(GL_TEXTURE_2D, tex[i]);
 
-    // Poor filtering. Needed !
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        // Give an empty image to OpenGL ( the last "0" )
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 
-    // Set "renderedTexture" as our colour attachement #0
-    glFramebufferTextureARB(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0);
+        // Poor filtering. Needed !
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    // Set the list of draw buffers.
-    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, drawBuffers); // "1" is the size of drawBuffers
+        // Set "renderedTexture" as our colour attachement #0
+        glFramebufferTextureARB(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex[i], 0);
 
-    // Always check that our framebuffer is ok
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        throw runtime_error("problem with the framebuffer");
+        // Set the list of draw buffers.
+        GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0};
+        glDrawBuffers(1, drawBuffers); // "1" is the size of drawBuffers
+
+        // Always check that our framebuffer is ok
+        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            throw runtime_error("problem with the framebuffer");
+        }
+
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to screen
 }
 
-void Viewer::scene() {
+double r = 0;
+
+void Viewer::scene(bool lighting) {
 
     // Set up perspective projection, using current size and aspect
     // ratio of display
@@ -480,10 +499,7 @@ void Viewer::scene() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslated(0.0, 0.0, -7.0);
-    static double r = 0;
     glRotated(r, 1, 0.2, 0);
-    r += 2;
-    cout << "r = " << r << endl;
 
     Vector3D c1[] = { Vector3D(-1, 0, 0),
                       Vector3D(0, 0, 0),
@@ -509,10 +525,12 @@ void Viewer::scene() {
     //level.segments.push_back(&bSeg3);
     level.calc();
 
-    drawLevel(level);
+    drawLevel(level, lighting);
 }
 
 bool Viewer::on_expose_event(GdkEventExpose*) {
+
+    assert(isGlInit);
     Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
     if (!gldrawable)
@@ -525,18 +543,18 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     printOpenGLError();
 
-    glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     glDisable(GL_TEXTURE_2D);
-    glViewport(0, 0, 256, 256);
+    glViewport(0, 0, 512, 512);
     //glViewport(0, 0, get_width(), get_height());
     shaderMgr.useShader(ShaderManager::defaultShader);
 
     printOpenGLError();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    scene();
-
+    scene(false);
+/*
     GLint m_viewport[4];
     glGetIntegerv( GL_VIEWPORT, m_viewport );
     int width  = m_viewport[2];
@@ -555,7 +573,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     ofstream fout ("img",ios_base::binary);
     fout.write(raw_img, width * height * 3);
-    delete raw_img;
+    delete raw_img;*/
     //exit(0);
 /*
     static int count = 0;
@@ -564,10 +582,9 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
         exit(0);*/
 
 
-#if 1
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, get_width(), get_height());
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo[1]);
+    glViewport(0, 0, 512, 512);
+    //glViewport(0, 0, get_width(), get_height());
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -576,17 +593,17 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    shaderMgr.useShader("glowH");
-
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
 
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+    shaderMgr.useShader("glowH");
     //glColor4f(1.0f,1.0f,0,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glBindTexture(GL_TEXTURE_2D, tex[0]);
     glBegin(GL_QUADS);
     glTexCoord2f (0.0, 0.0);
     glVertex3f(0.0f, 0.0f, 0.0f);
@@ -597,12 +614,30 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glTexCoord2f (0.0, 1.0);
     glVertex3f(0.0f, 1.0f, 0.0f);
     glEnd();
-#endif
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, get_width(), get_height());
+
+    shaderMgr.useShader("glowV");
+    //glColor4f(1.0f,1.0f,0,1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glBindTexture(GL_TEXTURE_2D, tex[1]);
+    glBegin(GL_QUADS);
+    glTexCoord2f (0.0, 0.0);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glTexCoord2f (1.0, 0.0);
+    glVertex3f(1.0f, 0.0f, 0.0f);
+    glTexCoord2f (1.0, 1.0);
+    glVertex3f(1.0f, 1.0f, 0.0f);
+    glTexCoord2f (0.0, 1.0);
+    glVertex3f(0.0f, 1.0f, 0.0f);
+    glEnd();
 
     shaderMgr.useShader(ShaderManager::defaultShader);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    scene();
+    scene(true);
 
     glFlush();
 
@@ -610,11 +645,17 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     gldrawable->gl_end();
 
+
+    r += 2;
+    cout << "r = " << r << endl;
+
     return true;
 }
 
 bool Viewer::on_configure_event(GdkEventConfigure* event) {
     Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
+
+    cout << "==> on_configure" << endl;
 
     if (!gldrawable)
         return false;

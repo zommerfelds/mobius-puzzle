@@ -45,14 +45,16 @@ protected:
   virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 private:
+  bool isGlInit;
+
   void createDrawBuffer();
-  void scene();
+  void scene(bool lighting);
 
   sigc::connection timerConnection;
   ShaderManager shaderMgr;
 
-  GLuint framebufferName;
-  GLuint renderedTexture;
+  GLuint fbo[2];
+  GLuint tex[2];
 
 };
 
