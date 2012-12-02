@@ -5,6 +5,7 @@
 #ifndef CS488_VIEWER_HPP
 #define CS488_VIEWER_HPP
 
+#include "shader.hpp"
 #include <gtkmm.h>
 #include <gtkglmm.h>
 
@@ -44,7 +45,14 @@ protected:
   virtual bool on_motion_notify_event(GdkEventMotion* event);
 
 private:
-  sigc::connection m_timer_connection;
+  void createDrawBuffer();
+  void scene();
+
+  sigc::connection timerConnection;
+  ShaderManager shaderMgr;
+
+  GLuint framebufferName;
+  GLuint renderedTexture;
 
 };
 

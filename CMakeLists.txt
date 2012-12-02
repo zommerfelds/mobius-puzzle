@@ -12,6 +12,8 @@ pkg_check_modules(GLEXT gtkglextmm-1.2)
 include_directories(${GLEXT_INCLUDE_DIRS})
 link_directories(${GLEXT_LIBRARY_DIRS})
 
+find_package(GLEW)
+
 #find_package(Boost REQUIRED)
 #include_directories(${Boost_INCLUDE_DIRS})
 

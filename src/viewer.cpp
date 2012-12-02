@@ -2,16 +2,40 @@
 // Student Number: 20493973
 // User-id: cgzommer
 
+#include <GL/glew.h>
 #include "viewer.hpp"
 #include "algebra.hpp"
 #include "level.hpp"
 #include <iostream>
-#include <GL/gl.h>
-#include <GL/glu.h>
+//#include <GL/gl.h>
+//#include <GL/glu.h>
 #include <cassert>
 #include <algorithm>
 #include <boost/foreach.hpp>
+#include <GL/glew.h>
+#include <fstream> // XXX
 using namespace std;
+
+// XXX
+#define printOpenGLError() printOglError(__FILE__, __LINE__)
+
+int printOglError(const char *file, int line)
+{
+    //
+    // Returns 1 if an OpenGL error occurred, 0 otherwise.
+    //
+    GLenum glErr;
+    int    retCode = 0;
+
+    glErr = glGetError();
+    while (glErr != GL_NO_ERROR)
+    {
+        printf("glError in file %s @ line %d: %s\n", file, line, gluErrorString(glErr));
+        retCode = 1;
+        glErr = glGetError();
+    }
+    return retCode;
+}
 
 Viewer::Viewer() {
     Glib::RefPtr<Gdk::GL::Config> glconfig;
@@ -52,6 +76,7 @@ void Viewer::invalidate() {
 void drawCurveBlock(const Curve& c) {
 
     glColor3f(0.8, 0.8, 1);
+    glDisable(GL_TEXTURE_2D);
 
     const double radius = 0.15;
     Vector3D q0, q1, q2, q3;
@@ -81,6 +106,10 @@ void drawCurveBlock(const Curve& c) {
         glColor3f(0.8, 0.8, 1);
         glEnable(GL_LIGHTING);
         //}
+
+
+        glDisable(GL_LIGHTING);
+        glColor3f(1, 0.8, 1);
 
         n = radius * n;
         e = radius * e;
@@ -374,7 +403,7 @@ void Viewer::on_realize() {
     glEnable(GL_DEPTH_TEST);
     glClearColor(0, 0, 0, 0);
 
-//    glEnable(GL_CULL_FACE);
+//    glEnable(GL_CULL_FACE); XXX
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
@@ -383,20 +412,66 @@ void Viewer::on_realize() {
     //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
     gldrawable->gl_end();
+
+    glewInit();
+
+    cout << "===> on_realize()" << endl;
+    createDrawBuffer();
+
+    list<string> defines;
+    defines.push_back("VERTICAL_BLUR_9");
+    shaderMgr.loadShader("glowH", "data/glow.vert", "data/glow.frag", defines);
+    shaderMgr.useShader("glowH");
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+    shaderMgr.setParam("blurSampler", 0);
+
+    shaderMgr.useShader(ShaderManager::defaultShader);
 }
 
-bool Viewer::on_expose_event(GdkEventExpose*) {
-    Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
+void Viewer::createDrawBuffer() {
 
-    if (!gldrawable)
-        return false;
+    // The framebuffer, which regroups 0, 1, or more textures, and 0 or 1 depth buffer.
+    glGenFramebuffers(1, &framebufferName);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
 
-    if (!gldrawable->gl_begin(get_gl_context()))
-        return false;
+    glGenTextures(1, &renderedTexture);
 
-    // Clear the screen
+    // "Bind" the newly created texture : all future texture functions will modify this texture
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Give an empty image to OpenGL ( the last "0" )
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 256, 256, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
+
+    // Poor filtering. Needed !
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // Set "renderedTexture" as our colour attachement #0
+    glFramebufferTextureARB(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, renderedTexture, 0);
+
+    // Set the list of draw buffers.
+    GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, drawBuffers); // "1" is the size of drawBuffers
+
+    // Always check that our framebuffer is ok
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        throw runtime_error("problem with the framebuffer");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to screen
+}
+
+void Viewer::scene() {
+
+    // Set up perspective projection, using current size and aspect
+    // ratio of display
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(40.0, (GLfloat) get_width() / (GLfloat) get_height(), 0.1, 1000.0);
 
     // Modify the current projection matrix so that we move the
     // camera away from the origin.  We'll draw the game at the
@@ -408,6 +483,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     static double r = 0;
     glRotated(r, 1, 0.2, 0);
     r += 2;
+    cout << "r = " << r << endl;
 
     Vector3D c1[] = { Vector3D(-1, 0, 0),
                       Vector3D(0, 0, 0),
@@ -434,6 +510,99 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     level.calc();
 
     drawLevel(level);
+}
+
+bool Viewer::on_expose_event(GdkEventExpose*) {
+    Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
+
+    if (!gldrawable)
+        return false;
+
+    if (!gldrawable->gl_begin(get_gl_context()))
+        return false;
+
+    // Clear the screen
+
+    printOpenGLError();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    glDisable(GL_TEXTURE_2D);
+    glViewport(0, 0, 256, 256);
+    //glViewport(0, 0, get_width(), get_height());
+    shaderMgr.useShader(ShaderManager::defaultShader);
+
+    printOpenGLError();
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    scene();
+
+    GLint m_viewport[4];
+    glGetIntegerv( GL_VIEWPORT, m_viewport );
+    int width  = m_viewport[2];
+    int height =  m_viewport[3];
+
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+
+    // rgb image
+    glCopyTexImage2D(GL_TEXTURE_2D,0,GL_RGB,m_viewport[0],
+                    m_viewport[1], m_viewport[2], m_viewport[3],0);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    char* raw_img = new char [width * height * 3];
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_img);
+
+    ofstream fout ("img",ios_base::binary);
+    fout.write(raw_img, width * height * 3);
+    delete raw_img;
+    //exit(0);
+/*
+    static int count = 0;
+    count++;
+    if (count == 10)
+        exit(0);*/
+
+
+#if 1
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, get_width(), get_height());
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1, 0, 1);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    shaderMgr.useShader("glowH");
+
+    glDisable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+
+    //glColor4f(1.0f,1.0f,0,1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (0.0, 0.0);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    glTexCoord2f (1.0, 0.0);
+    glVertex3f(1.0f, 0.0f, 0.0f);
+    glTexCoord2f (1.0, 1.0);
+    glVertex3f(1.0f, 1.0f, 0.0f);
+    glTexCoord2f (0.0, 1.0);
+    glVertex3f(0.0f, 1.0f, 0.0f);
+    glEnd();
+#endif
+
+    shaderMgr.useShader(ShaderManager::defaultShader);
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    scene();
 
     glFlush();
 
@@ -452,19 +621,6 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 
     if (!gldrawable->gl_begin(get_gl_context()))
         return false;
-
-    // Set up perspective projection, using current size and aspect
-    // ratio of display
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glViewport(0, 0, event->width, event->height);
-    gluPerspective(40.0, (GLfloat) event->width / (GLfloat) event->height, 0.1,
-            1000.0);
-
-    // Reset to modelview matrix mode
-
-    glMatrixMode(GL_MODELVIEW);
 
     gldrawable->gl_end();
 
