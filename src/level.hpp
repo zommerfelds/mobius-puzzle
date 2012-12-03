@@ -11,6 +11,10 @@ enum SegmentType {
     T
 };
 
+const double radius = 0.15; // thickness of a normal block
+const double tRadius = 0.4; // radius of curves in T-blocks
+const double tLenght = 2*tRadius + 2*radius;
+
 const size_t nBezierSegments = 21;
 
 class Segment {
@@ -87,13 +91,13 @@ private:
 
 class TSegment : public Segment {
 public:
-    TSegment(const Vector3D ends[2]);
+    TSegment(const Vector3D& start, const Vector3D& dir);
     SegmentType getType() const { return T; }
 
     size_t num() const { return 1; }
     Vector3D n(size_t i) const { return n_begin; }
-    Vector3D p(size_t i) const { return c[i]; }
-    Vector3D d(size_t i) const { return _d; }
+    Vector3D p(size_t i) const { if(i == 0) return start; else return start + tLenght*dir; }
+    Vector3D d(size_t i) const { return dir; }
 
     /*virtual size_t num() const { return 0; };
     virtual Vector3D p(size_t i) const;
@@ -104,9 +108,7 @@ public:
 private:
     void calc(const Vector3D& n_begin);
 
-    Vector3D c[2];
-    Vector3D _d;
-    double len;
+    Vector3D start, dir;
     Vector3D n_begin;
 
     friend class Level;

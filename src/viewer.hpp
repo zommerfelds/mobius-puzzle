@@ -13,6 +13,7 @@
 
 class Game;
 class Segment;
+class TSegment;
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -55,6 +56,7 @@ private:
   void scene(bool lightAndTex);
   void drawLevel(bool lightAndTex);
   void drawCurveBlock(const Segment& s, bool lightAndTex);
+  void drawTBlock(const TSegment& t, bool lightAndTex);
 
   sigc::connection timerConnection;
   ShaderManager shaderMgr;

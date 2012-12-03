@@ -190,14 +190,18 @@ void Viewer::invalidate() {
     get_window()->invalidate_rect(allocation, false);
 }
 
-const double radius = 0.15;
-const double tRadius = 0.4;
-
 Colour colours[4] = {
-        Colour(1, 0, 1),
-        Colour(0, 1, 1),
-        Colour(1, 1, 0),
-        Colour(0, 1, 0)
+#if 1
+    Colour(1, 0, 1),
+    Colour(0, 1, 1),
+    Colour(1, 1, 0),
+    Colour(0, 1, 0)
+#else
+    Colour(1, 1, 1),
+    Colour(1, 1, 1),
+    Colour(1, 1, 1),
+    Colour(1, 1, 1)
+#endif
 };
 
 void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
@@ -216,10 +220,7 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         Vector3D e = d.cross(n);
         e.normalize();
 
-        double tex0 = i / (double) s.num();
-        double tex1 = (i+1) / (double) s.num();
-
-#if 1
+#if 0
         glDisable(GL_LIGHTING);
         glBegin(GL_LINES);/*
         glColor3f(0, 1, 0);
@@ -254,6 +255,10 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         l[3] = p + n - e;
 
         if (i > 0) {
+
+            double tex0 = (i-1) / (double) (s.num() - 1);
+            double tex1 = i / (double) (s.num() - 1);
+
             glBegin(GL_QUADS);
 
             for (size_t i = 0; i < 4; i++) {
@@ -287,74 +292,161 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
     }
 }
 
-void drawT(const Vector3D& p, const Vector3D& d, const Vector3D& n, bool lightAndTex, size_t side) {
+void drawT(Vector3D p, Vector3D d, const Vector3D& n, bool lightAndTex, size_t side) {
 
-    Vector3D q0, q1;
-    Vector3D s0, s1;
+    Vector3D q[2];
+    Vector3D s[2];
 
-    Vector3D a0, a1;
-    Vector3D b0, b1;
+    Vector3D r[2];
+    Vector3D l[2];
 
     Vector3D e = d.cross(n);
 
+    float x_old, y_old;
+
+    const double f = tRadius / tLenght;
+
+    Vector3D v[4];
+    v[0] = p + tRadius*d            + radius*n - radius*e;
+    v[1] = p + (tRadius+2*radius)*d + radius*n - radius*e;
+    v[2] = v[1] + tRadius*n;
+    v[3] = v[0] + tRadius*n;
+    glColor3f(colours[(side+3)%4].R(), colours[(side+3)%4].G(), colours[(side+3)%4].B());
+    glNormal3d(-e[0], -e[1], -e[2]);
+    glTexCoord2f (f, 0.2);
+    glVertex3dv(&v[0][0]);
+    glTexCoord2f (f, 0.2 + f * radius/0.2);
+    glVertex3dv(&v[3][0]);
+    glTexCoord2f (1-f, 0.2 + f * radius/0.2);
+    glVertex3dv(&v[2][0]);
+    glTexCoord2f (1-f, 0.2);
+    glVertex3dv(&v[1][0]);
+
+    v[0] = p + tRadius*d            + radius*n + radius*e;
+    v[1] = p + (tRadius+2*radius)*d + radius*n + radius*e;
+    v[2] = v[1] + tRadius*n;
+    v[3] = v[0] + tRadius*n;
+    glColor3f(colours[(side+1)%4].R(), colours[(side+1)%4].G(), colours[(side+1)%4].B());
+    glNormal3d(e[0], e[1], e[2]);
+    glTexCoord2f (f, 1);
+    glVertex3dv(&v[0][0]);
+    glTexCoord2f (1-f, 1);
+    glVertex3dv(&v[1][0]);
+    glTexCoord2f (1-f, 1 - f * radius/0.2);
+    glVertex3dv(&v[2][0]);
+    glTexCoord2f (f, 1 - f * radius/0.2);
+    glVertex3dv(&v[3][0]);
+
     const size_t c_segs = 10;
-    for (size_t i = 0; i <= c_segs; i++) {
-        float t = i / (double) c_segs;
-        float a = t * M_PI * 0.5;
-        float x = sin(a) * tRadius;
-        float y = (1-cos(a)) * tRadius;
-
-        b0 = p + x*d + radius*n - radius*e;
-        b1 = p + x*d + radius*n + radius*e;
-        s0 = b0 + y*n;
-        s1 = b1 + y*n;
-
-        if (i > 0) {
-
-            if (lightAndTex)
-                glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
-
-            //glNormal3d(n[0],n[1],n[2]);
-            //glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&s0[0]);
-            //glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&q0[0]);
-            //glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&q1[0]);
-            //glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s1[0]);
-
-            //glNormal3d(n[0],n[1],n[2]);
-            //glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&q0[0]);
-            //glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s0[0]);
-            //glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&b0[0]);
-            //glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&a0[0]);
-
-            //glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&q1[0]);
-            //glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&a1[0]);
-            //glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&b1[0]);
-            //glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s1[0]);
+    for (size_t c = 0; c < 2; c++) {
+        if (c == 1) {
+            p = p + tLenght * d;
+            e = -e;
+            d = -d;
         }
 
-        q0 = s0;
-        q1 = s1;
+        for (size_t i = 0; i <= c_segs; i++) {
+            float t = i / (double) c_segs;
+            float a = t * M_PI * 0.5;
+            float x = sin(a) * tRadius;
+            float y = (1-cos(a)) * tRadius;
 
-        a0 = b0;
-        a1 = b1;
+            l[0] = p + x*d + radius*n - radius*e;
+            l[1] = p + x*d + radius*n + radius*e;
+            s[0] = l[0] + y*n;
+            s[1] = l[1] + y*n;
+
+            if (i > 0) {
+
+                double tex0 = (i-1) / (double) c_segs;
+                double tex1 = i / (double) c_segs;
+
+                if (lightAndTex)
+                    glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
+
+                Vector3D normal = (q[0]-s[0]).cross(q[1]-q[0]);
+                //normal.normalize(); // not needed
+
+                glNormal3d(normal[0], normal[1], normal[2]);
+                glTexCoord2f (tex1, 0.0);
+                glVertex3dv(&s[0][0]);
+                glTexCoord2f (tex0, 0.0);
+                glVertex3dv(&q[0][0]);
+                glTexCoord2f (tex0, 0.2);
+                glVertex3dv(&q[1][0]);
+                glTexCoord2f (tex1, 0.2);
+                glVertex3dv(&s[1][0]);
+
+                tex0 = x_old / tRadius * f;
+                tex1 = x / tRadius * f;
+
+                if (c == 1) {
+                    tex0 = 1 - tex0;
+                    tex1 = 1 - tex1;
+                }
+
+                if (lightAndTex)
+                    glColor3f(colours[(side+3+c*2)%4].R(), colours[(side+3+c*2)%4].G(), colours[(side+3+c*2)%4].B());
+
+                glNormal3d(-e[0], -e[1], -e[2]);
+                if (c == 0) {
+                    glTexCoord2f (tex0, 0.2 + 0.2*y_old/(2*radius));
+                    glVertex3dv(&q[0][0]);
+                    glTexCoord2f (tex1, 0.2 + 0.2*y/(2*radius));
+                    glVertex3dv(&s[0][0]);
+                    glTexCoord2f (tex1, 0.2);
+                    glVertex3dv(&l[0][0]);
+                    glTexCoord2f (tex0, 0.2);
+                    glVertex3dv(&r[0][0]);
+                } else {
+                    glTexCoord2f (tex0, 1.0 - 0.2*y_old/(2*radius));
+                    glVertex3dv(&q[0][0]);
+                    glTexCoord2f (tex1, 1.0 - 0.2*y/(2*radius));
+                    glVertex3dv(&s[0][0]);
+                    glTexCoord2f (tex1, 1.0);
+                    glVertex3dv(&l[0][0]);
+                    glTexCoord2f (tex0, 1.0);
+                    glVertex3dv(&r[0][0]);
+                }
+
+                if (lightAndTex)
+                    glColor3f(colours[(side+1+c*2)%4].R(), colours[(side+1+c*2)%4].G(), colours[(side+1+c*2)%4].B());
+
+                glNormal3dv(&e[0]);
+                if (c == 0) {
+                    glTexCoord2f (tex0, 1.0 - 0.2*y_old/(2*radius));
+                    glVertex3dv(&q[1][0]);
+                    glTexCoord2f (tex0, 1.0);
+                    glVertex3dv(&r[1][0]);
+                    glTexCoord2f (tex1, 1.0);
+                    glVertex3dv(&l[1][0]);
+                    glTexCoord2f (tex1, 1.0 - 0.2*y/(2*radius));
+                    glVertex3dv(&s[1][0]);
+                } else {
+                    glTexCoord2f (tex0, 0.2 + 0.2*y_old/(2*radius));
+                    glVertex3dv(&q[1][0]);
+                    glTexCoord2f (tex0, 0.2);
+                    glVertex3dv(&r[1][0]);
+                    glTexCoord2f (tex1, 0.2);
+                    glVertex3dv(&l[1][0]);
+                    glTexCoord2f (tex1, 0.2 + 0.2*y/(2*radius));
+                    glVertex3dv(&s[1][0]);
+                }
+            }
+
+            q[0] = s[0];
+            q[1] = s[1];
+
+            r[0] = l[0];
+            r[1] = l[1];
+
+            x_old = x;
+            y_old = y;
+        }
     }
 }
 
-void drawTBlock(const TSegment& t, bool lightAndTex) {
-
-    glColor3f(0.8, 0.8, 1);
+void Viewer::drawTBlock(const TSegment& t, bool lightAndTex) {
 
     Vector3D q[4];
     Vector3D l[4];
@@ -377,10 +469,17 @@ void drawTBlock(const TSegment& t, bool lightAndTex) {
     l[2] = t.p(1) - n - e;
     l[3] = t.p(1) + n - e;
 
-    glBegin(GL_QUADS);
+    if (lightAndTex) {
+        glEnable(GL_LIGHTING);
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, tex[0]);
+    }
+    else {
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_LIGHTING);
+    }
 
-    if (lightAndTex)
-        glColor3f(1, 0, 1);
+    //glDisable(GL_TEXTURE_2D); // XXX
 
     glBegin(GL_QUADS);
 
@@ -603,6 +702,9 @@ void Viewer::scene(bool lightAndTex) {
               n[0], n[1], n[2]);
 
     drawLevel(lightAndTex);
+
+    if (!lightAndTex)
+        particleSys.draw();
 }
 
 bool Viewer::on_expose_event(GdkEventExpose*) {
@@ -617,7 +719,6 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
         return false;
 
     // Clear the screen
-
     printOpenGLError();
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
@@ -631,6 +732,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     scene(false);
+
+    printOpenGLError();
 /*
     GLint m_viewport[4];
     glGetIntegerv( GL_VIEWPORT, m_viewport );
@@ -663,6 +766,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glViewport(0, 0, 512, 512);
     //glViewport(0, 0, get_width(), get_height());
 
+    printOpenGLError();
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(0, 1, 0, 1);
@@ -680,6 +785,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     //glColor4f(1.0f,1.0f,0,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    printOpenGLError();
+
     glBindTexture(GL_TEXTURE_2D, fboTex[0]);
     glBegin(GL_QUADS);
     glTexCoord2f (0.0, 0.0);
@@ -694,6 +801,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, get_width(), get_height());
+
+    printOpenGLError();
 
     shaderMgr.useShader("glowV");
     //glColor4f(1.0f,1.0f,0,1.0f);
@@ -736,8 +845,11 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
     //drawParallelepiped(center, Vector3D(0.2,0,0), Vector3D(0,0,-0.2), Vector3D(0,0.2,0));
 
+    printOpenGLError();
+
     particleSys.update(0.05);
-    particleSys.draw();
+
+    printOpenGLError();
 
     glFlush();
 
@@ -792,8 +904,9 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
     int dx = event->x - oldX;
     int dy = event->y - oldY;
     Vector3D n = game.getPlayerSeg()->n(game.getPlayerT());
-    camera.rotate(n, dx*0.01);
-    camera.rotate(n.cross(camera), dy*0.01);
+    float speed = 0.01;
+    camera.rotate(n, -dx*speed);
+    camera.rotate(n.cross(camera), -dy*speed);
     camera.normalize();
     oldX = event->x;
     oldY = event->y;

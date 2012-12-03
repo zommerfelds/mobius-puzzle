@@ -52,6 +52,7 @@ void ParticleSystem::update(double dt) {
 
 void ParticleSystem::draw() {
     glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
     glBegin(GL_POINTS);
 
 

@@ -145,21 +145,17 @@ void StraightSegment::calc(const Vector3D& n_begin) {
 }
 
 
-TSegment::TSegment(const Vector3D ends[2])
-: len (0) {
+TSegment::TSegment(const Vector3D& start, const Vector3D& dir)
+: start (start), dir (dir) {
     side[0] = NULL; side[1] = NULL; side[2] = NULL; side[3] = NULL;
-    for (size_t i = 0; i < 2; i++)
-        c[i] = ends[i];
 }
 
 void TSegment::calc(const Vector3D& n_begin) {
     this->n_begin = n_begin;
-    _d = c[1] - c[0];
-    len = _d.normalize();
 }
 
 void Level::calc() {
-    cout << "Calculating level" << endl;
+    //cout << "Calculating level" << endl;
 
     if (segments.empty())
         return;
@@ -178,7 +174,7 @@ void Level::calc() {
                 n_end = n_begin;
             }
 
-            cout << "n_begin = " << n_begin << ", n_end = " << n_end << endl;
+            //cout << "n_begin = " << n_begin << ", n_end = " << n_end << endl;
 
             double a_begin = acos(n_begin.dot(n_end));
             if (n_begin.cross(n_end).dot(bSeg->d((size_t)0)) < 0)
@@ -188,7 +184,7 @@ void Level::calc() {
 
             n_end = bSeg->n(bSeg->num() - 1);
 
-            cout << "a_begin = " << a_begin << endl;
+            //cout << "a_begin = " << a_begin << endl;
         } else if (seg->getType() == STRAIGHT) {
             StraightSegment* sSeg = static_cast<StraightSegment*>(seg);
             if (seg->prev == NULL) {
@@ -199,7 +195,7 @@ void Level::calc() {
         } else if (seg->getType() == T) {
             TSegment* tSeg = static_cast<TSegment*>(seg);
             if (seg->prev == NULL) {
-                n_end = (tSeg->c[1] - tSeg->c[0]).cross(Vector3D(1,0,0));
+                n_end = (tSeg->dir).cross(Vector3D(1,0,0));
                 cout << "WARNING: not really implemented" << endl;
             }
             tSeg->calc(n_end);

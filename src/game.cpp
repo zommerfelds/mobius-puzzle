@@ -18,7 +18,8 @@ Game::Game() {
                       Vector3D(-1, 1, 2) };
 
     BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.5);
-    TSegment* seg2 = new TSegment(c2);
+    TSegment* seg2 = new TSegment(Vector3D(0, 1, 0), Vector3D(1, 0, 0));
+    //StraightSegment* seg2 = new StraightSegment(c2, 0.1);
     //StraightSegment sSeg3(c2, 0.5);
     //BezierSegment bSeg3(c3, M_PI*0.5);
     seg1->next = seg2;
