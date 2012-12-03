@@ -12,6 +12,7 @@ namespace {
 double random01() {
     return rand() / (double)RAND_MAX;
 }
+
 }
 
 ParticleSystem::ParticleSystem(const Level& level)
@@ -56,7 +57,7 @@ void ParticleSystem::draw() {
 
     BOOST_FOREACH(Particle& p, particles) {
         double c = 1-p.a/p.max;
-        glColor4f(1,0,0,c);
+        glColor3f(c,c,c);
         glVertex3dv(&p.pos[0]);
     }
 

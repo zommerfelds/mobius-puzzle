@@ -190,15 +190,23 @@ void Viewer::invalidate() {
     get_window()->invalidate_rect(allocation, false);
 }
 
+const double radius = 0.15;
+const double tRadius = 0.4;
+
+Colour colours[4] = {
+        Colour(1, 0, 1),
+        Colour(0, 1, 1),
+        Colour(1, 1, 0),
+        Colour(0, 1, 0)
+};
 
 void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
 
     glColor3f(0.8, 0.8, 1);
     glDisable(GL_TEXTURE_2D);
 
-    const double radius = 0.15;
-    Vector3D q0, q1, q2, q3;
-    Vector3D s0, s1, s2, s3;
+    Vector3D q[4];
+    Vector3D l[4];
 
     for (size_t i = 0; i < s.num(); i++) {
         const Vector3D& p = s.p(i);
@@ -212,7 +220,6 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         double tex1 = (i+1) / (double) s.num();
 
 #if 1
-        //if (i == 0) {
         glDisable(GL_LIGHTING);
         glBegin(GL_LINES);/*
         glColor3f(0, 1, 0);
@@ -226,7 +233,6 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         glVertex3d(p[0] + e[0], p[1] + e[1], p[2] + e[2]);*/
         glEnd();
         glColor3f(0.8, 0.8, 1);
-        //}
 #endif
 
         if (lightAndTex) {
@@ -242,79 +248,116 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         n = radius * n;
         e = radius * e;
 
-        s0 = p + n + e;
-        s1 = p - n + e;
-        s2 = p - n - e;
-        s3 = p + n - e;
+        l[0] = p + n + e;
+        l[1] = p - n + e;
+        l[2] = p - n - e;
+        l[3] = p + n - e;
 
         if (i > 0) {
             glBegin(GL_QUADS);
 
-            if (lightAndTex)
-                glColor3f(1, 0, 1);
-            glNormal3dv(&e[0]);
-            glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&s0[0]);
-            glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&q0[0]);
-            glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&q1[0]);
-            glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s1[0]);
+            for (size_t i = 0; i < 4; i++) {
 
-            if (lightAndTex)
-                glColor3f(1, 1, 0);
-            glNormal3d(-n[0],-n[1],-n[2]);
-            glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&s1[0]);
-            glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&q1[0]);
-            glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&q2[0]);
-            glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s2[0]);
+                if (lightAndTex)
+                    glColor3f(colours[i].R(), colours[i].G(), colours[i].B());
 
-            if (lightAndTex)
-                glColor3f(0, 1, 1);
-            glNormal3d(-e[0],-e[1],-e[2]);
-            glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&s2[0]);
-            glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&q2[0]);
-            glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&q3[0]);
-            glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s3[0]);
+                switch (i) {
+                case 1: glNormal3dv(&e[0]); break;
+                case 2: glNormal3d(-n[0],-n[1],-n[2]); break;
+                case 3: glNormal3d(-e[0],-e[1],-e[2]); break;
+                case 0: glNormal3d(n[0],n[1],n[2]); break;
+                }
 
-            if (lightAndTex)
-                glColor3f(0, 1, 0);
-            glNormal3d(n[0],n[1],n[2]);
-            glTexCoord2f (tex1, 0.0);
-            glVertex3dv(&s3[0]);
-            glTexCoord2f (tex0, 0.0);
-            glVertex3dv(&q3[0]);
-            glTexCoord2f (tex0, 0.2);
-            glVertex3dv(&q0[0]);
-            glTexCoord2f (tex1, 0.2);
-            glVertex3dv(&s0[0]);
+                glTexCoord2f (tex1, 0.0);
+                glVertex3dv(&l[(i+3)%4][0]);
+                glTexCoord2f (tex0, 0.0);
+                glVertex3dv(&q[(i+3)%4][0]);
+                glTexCoord2f (tex0, 0.2);
+                glVertex3dv(&q[i][0]);
+                glTexCoord2f (tex1, 0.2);
+                glVertex3dv(&l[i][0]);
+
+            }
 
             glEnd();
         }
 
-        q0 = s0;
-        q1 = s1;
-        q2 = s2;
-        q3 = s3;
+        for (size_t i = 0; i < 4; i++)
+            q[i] = l[i];
     }
 }
 
-void drawTBlock(const TSegment& t) {
+void drawT(const Vector3D& p, const Vector3D& d, const Vector3D& n, bool lightAndTex, size_t side) {
+
+    Vector3D q0, q1;
+    Vector3D s0, s1;
+
+    Vector3D a0, a1;
+    Vector3D b0, b1;
+
+    Vector3D e = d.cross(n);
+
+    const size_t c_segs = 10;
+    for (size_t i = 0; i <= c_segs; i++) {
+        float t = i / (double) c_segs;
+        float a = t * M_PI * 0.5;
+        float x = sin(a) * tRadius;
+        float y = (1-cos(a)) * tRadius;
+
+        b0 = p + x*d + radius*n - radius*e;
+        b1 = p + x*d + radius*n + radius*e;
+        s0 = b0 + y*n;
+        s1 = b1 + y*n;
+
+        if (i > 0) {
+
+            if (lightAndTex)
+                glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
+
+            //glNormal3d(n[0],n[1],n[2]);
+            //glTexCoord2f (tex1, 0.0);
+            glVertex3dv(&s0[0]);
+            //glTexCoord2f (tex0, 0.0);
+            glVertex3dv(&q0[0]);
+            //glTexCoord2f (tex0, 0.2);
+            glVertex3dv(&q1[0]);
+            //glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s1[0]);
+
+            //glNormal3d(n[0],n[1],n[2]);
+            //glTexCoord2f (tex1, 0.0);
+            glVertex3dv(&q0[0]);
+            //glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s0[0]);
+            //glTexCoord2f (tex0, 0.2);
+            glVertex3dv(&b0[0]);
+            //glTexCoord2f (tex0, 0.0);
+            glVertex3dv(&a0[0]);
+
+            //glTexCoord2f (tex1, 0.0);
+            glVertex3dv(&q1[0]);
+            //glTexCoord2f (tex0, 0.0);
+            glVertex3dv(&a1[0]);
+            //glTexCoord2f (tex0, 0.2);
+            glVertex3dv(&b1[0]);
+            //glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s1[0]);
+        }
+
+        q0 = s0;
+        q1 = s1;
+
+        a0 = b0;
+        a1 = b1;
+    }
+}
+
+void drawTBlock(const TSegment& t, bool lightAndTex) {
 
     glColor3f(0.8, 0.8, 1);
 
-    const double radius = 0.15;
-    Vector3D q0, q1, q2, q3;
-    Vector3D s0, s1, s2, s3;
+    Vector3D q[4];
+    Vector3D l[4];
 
     Vector3D n = t.n(0);
 
@@ -324,32 +367,50 @@ void drawTBlock(const TSegment& t) {
     n = radius * n;
     e = radius * e;
 
-    q0 = t.p(0) + n + e;
-    q1 = t.p(0) - n + e;
-    q2 = t.p(0) - n - e;
-    q3 = t.p(0) + n - e;
+    q[0] = t.p(0) + n + e;
+    q[1] = t.p(0) - n + e;
+    q[2] = t.p(0) - n - e;
+    q[3] = t.p(0) + n - e;
 
-    s0 = t.p(1) + n + e;
-    s1 = t.p(1) - n + e;
-    s2 = t.p(1) - n - e;
-    s3 = t.p(1) + n - e;
+    l[0] = t.p(1) + n + e;
+    l[1] = t.p(1) - n + e;
+    l[2] = t.p(1) - n - e;
+    l[3] = t.p(1) + n - e;
 
-    glBegin(GL_QUAD_STRIP);
+    glBegin(GL_QUADS);
 
-    glNormal3dv(&e[0]);
-    glVertex3dv(&s0[0]);
-    glVertex3dv(&q0[0]);
-    glVertex3dv(&s1[0]);
-    glVertex3dv(&q1[0]);
-    glNormal3d(-n[0],-n[1],-n[2]);
-    glVertex3dv(&s2[0]);
-    glVertex3dv(&q2[0]);
-    glNormal3d(-e[0],-e[1],-e[2]);
-    glVertex3dv(&s3[0]);
-    glVertex3dv(&q3[0]);
-    glNormal3d(n[0],n[1],n[2]);
-    glVertex3dv(&s0[0]);
-    glVertex3dv(&q0[0]);
+    if (lightAndTex)
+        glColor3f(1, 0, 1);
+
+    glBegin(GL_QUADS);
+
+    for (size_t i = 0; i < 4; i++) {
+
+        if (t.side[i] == NULL) {
+            if (lightAndTex)
+                glColor3f(colours[i].R(), colours[i].G(), colours[i].B());
+
+            switch (i) {
+            case 1: glNormal3dv(&e[0]); break;
+            case 2: glNormal3d(-n[0],-n[1],-n[2]); break;
+            case 3: glNormal3d(-e[0],-e[1],-e[2]); break;
+            case 0: glNormal3d(n[0],n[1],n[2]); break;
+            }
+
+            glTexCoord2f(1, 0.0);
+            glVertex3dv(&l[(i+3)%4][0]);
+            glTexCoord2f(0, 0.0);
+            glVertex3dv(&q[(i+3)%4][0]);
+            glTexCoord2f(0, 0.2);
+            glVertex3dv(&q[i][0]);
+            glTexCoord2f(1, 0.2);
+            glVertex3dv(&l[i][0]);
+        } else {
+            Vector3D nn = t.n(0);
+            nn.rotate(t.d(0), M_PI * 0.5 * i);
+            drawT(t.p(0), t.d(0), nn, lightAndTex, i);
+        }
+    }
 
     glEnd();
 }
@@ -370,7 +431,7 @@ void Viewer::drawLevel(bool lightAndTex) {
         case T:
         {
             const TSegment* tSeg = static_cast<TSegment*>(segment);
-            drawTBlock(*tSeg);
+            drawTBlock(*tSeg, lightAndTex);
             break;
         }
 
@@ -535,7 +596,7 @@ void Viewer::scene(bool lightAndTex) {
     Vector3D p = seg->p(t);
     Vector3D g = p + 0.17 * n;
 
-    Vector3D c = g + 7*camera;
+    Vector3D c = g + 5*camera;
 
     gluLookAt(c[0], c[1], c[2],
               g[0], g[1], g[2],

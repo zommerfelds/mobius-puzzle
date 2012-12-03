@@ -99,6 +99,8 @@ public:
     virtual Vector3D p(size_t i) const;
     virtual Vector3D n(size_t i) const { return n_begin; }
     virtual Vector3D d(size_t i) const { return _d; }*/
+
+    Segment* side[4]; // each can be null
 private:
     void calc(const Vector3D& n_begin);
 
@@ -106,7 +108,6 @@ private:
     Vector3D _d;
     double len;
     Vector3D n_begin;
-    Segment* side[4]; // each can be null
 
     friend class Level;
 };
