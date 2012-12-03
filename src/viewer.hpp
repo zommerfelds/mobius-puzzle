@@ -7,6 +7,7 @@
 
 #include "shader.hpp"
 #include "algebra.hpp"
+#include "particles.hpp"
 #include <gtkmm.h>
 #include <gtkglmm.h>
 
@@ -68,6 +69,8 @@ private:
 
   int oldX;
   int oldY;
+
+  ParticleSystem particleSys;
 };
 
 #endif

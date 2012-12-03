@@ -151,7 +151,8 @@ void drawParallelepiped(const Vector3D& p0, const Vector3D& v1, const Vector3D& 
 Viewer::Viewer(Game& game)
 : isGlInit (false),
   game (game),
-  camera (1, 0, 0) {
+  camera (1, 0, 0),
+  particleSys (game.getLevel()) {
     Glib::RefPtr<Gdk::GL::Config> glconfig;
 
     // Ask for an OpenGL Setup with
@@ -249,7 +250,8 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         if (i > 0) {
             glBegin(GL_QUADS);
 
-            glColor3f(1, 0, 1);
+            if (lightAndTex)
+                glColor3f(1, 0, 1);
             glNormal3dv(&e[0]);
             glTexCoord2f (tex1, 0.0);
             glVertex3dv(&s0[0]);
@@ -260,7 +262,8 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
             glTexCoord2f (tex1, 0.2);
             glVertex3dv(&s1[0]);
 
-            glColor3f(1, 1, 0);
+            if (lightAndTex)
+                glColor3f(1, 1, 0);
             glNormal3d(-n[0],-n[1],-n[2]);
             glTexCoord2f (tex1, 0.0);
             glVertex3dv(&s1[0]);
@@ -271,7 +274,8 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
             glTexCoord2f (tex1, 0.2);
             glVertex3dv(&s2[0]);
 
-            glColor3f(0, 1, 1);
+            if (lightAndTex)
+                glColor3f(0, 1, 1);
             glNormal3d(-e[0],-e[1],-e[2]);
             glTexCoord2f (tex1, 0.0);
             glVertex3dv(&s2[0]);
@@ -282,7 +286,8 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
             glTexCoord2f (tex1, 0.2);
             glVertex3dv(&s3[0]);
 
-            glColor3f(0, 1, 0);
+            if (lightAndTex)
+                glColor3f(0, 1, 0);
             glNormal3d(n[0],n[1],n[2]);
             glTexCoord2f (tex1, 0.0);
             glVertex3dv(&s3[0]);
@@ -399,13 +404,14 @@ void Viewer::on_realize() {
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_NORMALIZE);
     glShadeModel(GL_FLAT);
+    glPointSize(5);
+    glEnable( GL_POINT_SMOOTH );
     //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
     gldrawable->gl_end();
 
     glewInit();
 
-    cout << "===> on_realize()" << endl;
     createDrawBuffer();
     loadTextures();
 
@@ -488,7 +494,6 @@ void Viewer::loadTextures() {
     char* buffer = new char [size];
     file.read (buffer, size);
     file.close();
-    cout << "size = " << size << endl;
 
     // Textur wird hier in die Grafikkarte geladen! Dabei werden Mipmaps generiert.
     gluBuild2DMipmaps(GL_TEXTURE_2D,                    // 2D Textur wird geladen
@@ -501,8 +506,6 @@ void Viewer::loadTextures() {
 
     delete [] buffer;
 }
-
-double r = 0;
 
 void Viewer::scene(bool lightAndTex) {
 
@@ -667,18 +670,19 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     //glTranslated(center[0], center[1], center[2]);
     //glRotated(30, 0, 0, 1);
     glColor3f(0, 0, 1);
+    glDisable(GL_TEXTURE_2D);
     //drawCube(0.2);
     drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
     //drawParallelepiped(center, Vector3D(0.2,0,0), Vector3D(0,0,-0.2), Vector3D(0,0.2,0));
+
+    particleSys.update(0.05);
+    particleSys.draw();
 
     glFlush();
 
     gldrawable->swap_buffers();
 
     gldrawable->gl_end();
-
-    r += 0.5;
-    cout << "r = " << r << endl;
 
     /*
     // update camera
