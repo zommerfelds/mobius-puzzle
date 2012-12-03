@@ -11,6 +11,7 @@
 #include <gtkglmm.h>
 
 class Game;
+class Segment;
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -49,7 +50,10 @@ private:
   bool isGlInit;
 
   void createDrawBuffer();
-  void scene(bool lighting);
+  void loadTextures();
+  void scene(bool lightAndTex);
+  void drawLevel(bool lightAndTex);
+  void drawCurveBlock(const Segment& s, bool lightAndTex);
 
   sigc::connection timerConnection;
   ShaderManager shaderMgr;
@@ -57,7 +61,8 @@ private:
   Game& game;
 
   GLuint fbo[2];
-  GLuint tex[2];
+  GLuint fboTex[2];
+  GLuint tex[1];
 
   Vector3D camera;
 

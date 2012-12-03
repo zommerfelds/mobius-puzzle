@@ -14,7 +14,8 @@
 #include <algorithm>
 #include <boost/foreach.hpp>
 #include <GL/glew.h>
-#include <fstream> // XXX
+#include <fstream>
+#include <vector>
 using namespace std;
 
 namespace {
@@ -168,6 +169,9 @@ Viewer::Viewer(Game& game)
     // Accept the configuration
     set_gl_capability(glconfig);
 
+    camera = Vector3D(1, 1, 1);
+    camera.normalize();
+
     // Register the fact that we want to receive these events
     add_events(
             Gdk::BUTTON1_MOTION_MASK | Gdk::BUTTON2_MOTION_MASK
@@ -186,7 +190,7 @@ void Viewer::invalidate() {
 }
 
 
-void drawCurveBlock(const Segment& s, bool lighting) {
+void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
 
     glColor3f(0.8, 0.8, 1);
     glDisable(GL_TEXTURE_2D);
@@ -202,6 +206,9 @@ void drawCurveBlock(const Segment& s, bool lighting) {
 
         Vector3D e = d.cross(n);
         e.normalize();
+
+        double tex0 = i / (double) s.num();
+        double tex1 = (i+1) / (double) s.num();
 
 #if 1
         //if (i == 0) {
@@ -221,12 +228,15 @@ void drawCurveBlock(const Segment& s, bool lighting) {
         //}
 #endif
 
-        if (lighting)
+        if (lightAndTex) {
             glEnable(GL_LIGHTING);
+            glEnable(GL_TEXTURE_2D);
+            glBindTexture(GL_TEXTURE_2D, tex[0]);
+        }
         else
             glDisable(GL_LIGHTING);
 
-        glColor3f(1, 0.8, 1);
+        glColor3f(1, 1, 1);
 
         n = radius * n;
         e = radius * e;
@@ -237,22 +247,51 @@ void drawCurveBlock(const Segment& s, bool lighting) {
         s3 = p + n - e;
 
         if (i > 0) {
-            glBegin(GL_QUAD_STRIP);
+            glBegin(GL_QUADS);
 
+            glColor3f(1, 0, 1);
             glNormal3dv(&e[0]);
+            glTexCoord2f (tex1, 0.0);
             glVertex3dv(&s0[0]);
+            glTexCoord2f (tex0, 0.0);
             glVertex3dv(&q0[0]);
-            glVertex3dv(&s1[0]);
+            glTexCoord2f (tex0, 0.2);
             glVertex3dv(&q1[0]);
+            glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s1[0]);
+
+            glColor3f(1, 1, 0);
             glNormal3d(-n[0],-n[1],-n[2]);
-            glVertex3dv(&s2[0]);
+            glTexCoord2f (tex1, 0.0);
+            glVertex3dv(&s1[0]);
+            glTexCoord2f (tex0, 0.0);
+            glVertex3dv(&q1[0]);
+            glTexCoord2f (tex0, 0.2);
             glVertex3dv(&q2[0]);
+            glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s2[0]);
+
+            glColor3f(0, 1, 1);
             glNormal3d(-e[0],-e[1],-e[2]);
-            glVertex3dv(&s3[0]);
+            glTexCoord2f (tex1, 0.0);
+            glVertex3dv(&s2[0]);
+            glTexCoord2f (tex0, 0.0);
+            glVertex3dv(&q2[0]);
+            glTexCoord2f (tex0, 0.2);
             glVertex3dv(&q3[0]);
+            glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s3[0]);
+
+            glColor3f(0, 1, 0);
             glNormal3d(n[0],n[1],n[2]);
-            glVertex3dv(&s0[0]);
+            glTexCoord2f (tex1, 0.0);
+            glVertex3dv(&s3[0]);
+            glTexCoord2f (tex0, 0.0);
+            glVertex3dv(&q3[0]);
+            glTexCoord2f (tex0, 0.2);
             glVertex3dv(&q0[0]);
+            glTexCoord2f (tex1, 0.2);
+            glVertex3dv(&s0[0]);
 
             glEnd();
         }
@@ -310,167 +349,9 @@ void drawTBlock(const TSegment& t) {
     glEnd();
 }
 
-#if 0
-Vector3D drawStraightBlock(const StraightSegment& seg, const Vector3D& n_begin) {
-
-    glColor3f(0.8, 0.8, 1);
-
-    const double radius = 0.15;
-    Vector3D q0, q1, q2, q3;
-    Vector3D s0, s1, s2, s3;
-    Vector3D n;
-
-    Vector3D d = seg.p[1] - seg.p[0];
-    d.normalize();
-
-    for (int i = 0; i <= (int) nBezierSegments; i++) {
-        double t = i / (double) nBezierSegments;
-        Vector3D p = seg.p[0] + t * d;
-
-        n = n_begin;
-        n.rotate(d, seg.a_begin + t*seg.a);
-
-        Vector3D e = d.cross(n);
-        e.normalize();
-
-        //if (i == 0) {
-        glDisable(GL_LIGHTING);
-        glBegin(GL_LINES);/*
-        glColor3f(0, 1, 0);
-        glVertex3dv(&p[0]);
-        glVertex3d(p[0] + d[0], p[1] + d[1], p[2] + d[2]);*/
-        glColor3f(0, 0, 1);
-        glVertex3d(p[0], p[1], p[2]);
-        glVertex3d(p[0] + n[0]/2, p[1] + n[1]/2, p[2] + n[2]/2);/*
-        glColor3f(1, 0, 1);
-        glVertex3dv(&p[0]);
-        glVertex3d(p[0] + e[0], p[1] + e[1], p[2] + e[2]);*/
-        glEnd();
-        glColor3f(0.8, 0.8, 1);
-        glEnable(GL_LIGHTING);
-        //}
-
-        n = radius * n;
-        e = radius * e;
-
-        s0 = p + n + e;
-        s1 = p - n + e;
-        s2 = p - n - e;
-        s3 = p + n - e;
-
-        if (i > 0) {
-            glBegin(GL_QUAD_STRIP);
-
-            glNormal3dv(&e[0]);
-            glVertex3dv(&s0[0]);
-            glVertex3dv(&q0[0]);
-            glVertex3dv(&s1[0]);
-            glVertex3dv(&q1[0]);
-            glNormal3d(-n[0],-n[1],-n[2]);
-            glVertex3dv(&s2[0]);
-            glVertex3dv(&q2[0]);
-            glNormal3d(-e[0],-e[1],-e[2]);
-            glVertex3dv(&s3[0]);
-            glVertex3dv(&q3[0]);
-            glNormal3d(n[0],n[1],n[2]);
-            glVertex3dv(&s0[0]);
-            glVertex3dv(&q0[0]);
-
-            glEnd();
-        }
-
-        q0 = s0;
-        q1 = s1;
-        q2 = s2;
-        q3 = s3;
-    }
-    n.normalize();
-    return n;
-}
-
-Vector3D drawBezierBlock(const BezierSegment& seg) {
-
-    glColor3f(0.8, 0.8, 1);
-
-    const double radius = 0.15;
-    Vector3D q0, q1, q2, q3;
-    Vector3D s0, s1, s2, s3;
-
-    Vector3D n;
-
-    for (int i = 0; i <= (int) nBezierSegments; i++) {
-        double t = i / (double) nBezierSegments;
-        const Vector3D& p = seg.p[i];
-        const Vector3D& d = seg.d[i];
-        n = seg.n[i];
-        n.rotate(d, seg.a_begin + t*seg.a);
-
-        Vector3D e = d.cross(n);
-        e.normalize();
-
-        //if (i == 0) {
-        glDisable(GL_LIGHTING);
-        glBegin(GL_LINES);/*
-        glColor3f(0, 1, 0);
-        glVertex3dv(&p[0]);
-        glVertex3d(p[0] + d[0], p[1] + d[1], p[2] + d[2]);*/
-        glColor3f(0, 0, 1);
-        glVertex3d(p[0], p[1], p[2]);
-        glVertex3d(p[0] + n[0]/2, p[1] + n[1]/2, p[2] + n[2]/2);/*
-        glColor3f(1, 0, 1);
-        glVertex3dv(&p[0]);
-        glVertex3d(p[0] + e[0], p[1] + e[1], p[2] + e[2]);*/
-        glEnd();
-        glColor3f(0.8, 0.8, 1);
-        glEnable(GL_LIGHTING);
-        //}
-
-        n = radius * n;
-        e = radius * e;
-
-        s0 = p + n + e;
-        s1 = p - n + e;
-        s2 = p - n - e;
-        s3 = p + n - e;
-        
-        if (i > 0) {
-            glBegin(GL_QUAD_STRIP);
-
-            glNormal3dv(&e[0]);
-            glVertex3dv(&s0[0]);
-            glVertex3dv(&q0[0]);
-            glVertex3dv(&s1[0]);
-            glVertex3dv(&q1[0]);
-            glNormal3d(-n[0],-n[1],-n[2]);
-            glVertex3dv(&s2[0]);
-            glVertex3dv(&q2[0]);
-            glNormal3d(-e[0],-e[1],-e[2]);
-            glVertex3dv(&s3[0]);
-            glVertex3dv(&q3[0]);
-            glNormal3d(n[0],n[1],n[2]);
-            glVertex3dv(&s0[0]);
-            glVertex3dv(&q0[0]);
-
-            glEnd();
-        }
-        
-        q0 = s0;
-        q1 = s1;
-        q2 = s2;
-        q3 = s3;
-    }
-    n.normalize();
-    return n;
-}
-
-void drawTSegment(const TSegment& seg) {
-
-}
-#endif
-
-void drawLevel(const Level& level, bool lighting) {
+void Viewer::drawLevel(bool lightAndTex) {
     Vector3D n_end;
-    BOOST_FOREACH(Segment* segment, level.segments) {
+    BOOST_FOREACH(Segment* segment, game.getLevel().segments) {
         switch (segment->getType()) {
         case BEZIER:
             //curve = static_cast<const Curve*>(static_cast<const BezierSegment*>(segment));
@@ -478,7 +359,7 @@ void drawLevel(const Level& level, bool lighting) {
         case STRAIGHT:
             //curve = static_cast<const Curve*>(static_cast<const StraightSegment*>(segment));
 
-            drawCurveBlock(*segment, lighting);
+            drawCurveBlock(*segment, lightAndTex);
             break;
 
         case T:
@@ -526,6 +407,7 @@ void Viewer::on_realize() {
 
     cout << "===> on_realize()" << endl;
     createDrawBuffer();
+    loadTextures();
 
     list<string> defines;
     defines.push_back("VERTICAL_BLUR_9");
@@ -556,10 +438,10 @@ void Viewer::createDrawBuffer() {
         glGenFramebuffers(1, &fbo[i]);
         glBindFramebuffer(GL_FRAMEBUFFER, fbo[i]);
 
-        glGenTextures(1, &tex[i]);
+        glGenTextures(1, &fboTex[i]);
 
         // "Bind" the newly created texture : all future texture functions will modify this texture
-        glBindTexture(GL_TEXTURE_2D, tex[i]);
+        glBindTexture(GL_TEXTURE_2D, fboTex[i]);
 
         // Give an empty image to OpenGL ( the last "0" )
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
@@ -569,7 +451,7 @@ void Viewer::createDrawBuffer() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
         // Set "renderedTexture" as our colour attachement #0
-        glFramebufferTextureARB(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex[i], 0);
+        glFramebufferTextureARB(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fboTex[i], 0);
 
         // Set the list of draw buffers.
         GLenum drawBuffers[2] = {GL_COLOR_ATTACHMENT0};
@@ -585,9 +467,44 @@ void Viewer::createDrawBuffer() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to screen
 }
 
+void Viewer::loadTextures() {
+    glGenTextures(1, &tex[0]);
+
+    // "Bind" the newly created texture : all future texture functions will modify this texture
+    glBindTexture(GL_TEXTURE_2D, tex[0]);
+
+    // Give an empty image to OpenGL ( the last "0" )
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+    ifstream file( "data/Rainbow Shards.data", ios::binary );
+    if (!file) throw runtime_error("error reading texture");
+    // copies all data into buffer
+    file.seekg (0, ios::end);
+    size_t size = file.tellg();
+    file.seekg (0, ios::beg);
+    char* buffer = new char [size];
+    file.read (buffer, size);
+    file.close();
+    cout << "size = " << size << endl;
+
+    // Textur wird hier in die Grafikkarte geladen! Dabei werden Mipmaps generiert.
+    gluBuild2DMipmaps(GL_TEXTURE_2D,                    // 2D Textur wird geladen
+                      GL_RGB,
+                      512,     // Breite des Bildes
+                      512,    // Höhe des Bildes
+                      GL_RGB,                           // Format
+                      GL_UNSIGNED_BYTE,                 // Wie Daten aufgeschriben sind
+                      buffer);
+
+    delete [] buffer;
+}
+
 double r = 0;
 
-void Viewer::scene(bool lighting) {
+void Viewer::scene(bool lightAndTex) {
 
     // Set up perspective projection, using current size and aspect
     // ratio of display
@@ -621,7 +538,7 @@ void Viewer::scene(bool lighting) {
               g[0], g[1], g[2],
               n[0], n[1], n[2]);
 
-    drawLevel(game.getLevel(), lighting);
+    drawLevel(lightAndTex);
 }
 
 bool Viewer::on_expose_event(GdkEventExpose*) {
@@ -699,7 +616,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     //glColor4f(1.0f,1.0f,0,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glBindTexture(GL_TEXTURE_2D, tex[0]);
+    glBindTexture(GL_TEXTURE_2D, fboTex[0]);
     glBegin(GL_QUADS);
     glTexCoord2f (0.0, 0.0);
     glVertex3f(0.0f, 0.0f, 0.0f);
@@ -718,7 +635,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     //glColor4f(1.0f,1.0f,0,1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glBindTexture(GL_TEXTURE_2D, tex[1]);
+    glBindTexture(GL_TEXTURE_2D, fboTex[1]);
     glBegin(GL_QUADS);
     glTexCoord2f (0.0, 0.0);
     glVertex3f(0.0f, 0.0f, 0.0f);
@@ -730,6 +647,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glVertex3f(0.0f, 1.0f, 0.0f);
     glEnd();
 
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     shaderMgr.useShader(ShaderManager::defaultShader);
     glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -749,7 +667,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     //glTranslated(center[0], center[1], center[2]);
     //glRotated(30, 0, 0, 1);
     glColor3f(0, 0, 1);
-//    drawCube(0.2);
+    //drawCube(0.2);
     drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
     //drawParallelepiped(center, Vector3D(0.2,0,0), Vector3D(0,0,-0.2), Vector3D(0,0.2,0));
 
