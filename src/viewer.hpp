@@ -6,6 +6,7 @@
 #define CS488_VIEWER_HPP
 
 #include "shader.hpp"
+#include "algebra.hpp"
 #include <gtkmm.h>
 #include <gtkglmm.h>
 
@@ -58,6 +59,10 @@ private:
   GLuint fbo[2];
   GLuint tex[2];
 
+  Vector3D camera;
+
+  int oldX;
+  int oldY;
 };
 
 #endif

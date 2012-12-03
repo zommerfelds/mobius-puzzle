@@ -47,17 +47,20 @@ Vector3D Segment::n(double t) const {
     double c1, c2;
     size_t i1, i2;
     coef(t, num(), i1, i2, c1, c2);
-    cout << "i1 = " << i1 << "; i2 = " << i2 << endl;
-    cout << "c1 = " << c1 << "; c2 = " << c2 << "; c1 + c2 = " << c1 + c2 << endl;
 
-    return c1 * n(i1) + c2 * n(i2);
+    Vector3D ret = c1 * n(i1) + c2 * n(i2);
+    ret.normalize();
+    return ret;
 }
 
 Vector3D Segment::d(double t) const {
     double c1, c2;
     size_t i1, i2;
     coef(t, num(), i1, i2, c1, c2);
-    return c1 * d(i1) + c2 * d(i2);
+
+    Vector3D ret = c1 * d(i1) + c2 * d(i2);
+    ret.normalize();
+    return ret;
 }
 
 BezierSegment::BezierSegment(const Vector3D curve[4], double a)

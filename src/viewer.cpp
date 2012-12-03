@@ -88,11 +88,69 @@ void drawCube(double length) {
   glEnd();
 }
 
+// draws a cube (front faces are counterclockwise)
+void drawParallelepiped(const Vector3D& p0, const Vector3D& v1, const Vector3D& v2, const Vector3D& v3) {
+  glBegin(GL_QUADS);
+
+  Vector3D p1 = p0 + v1;
+  Vector3D p2 = p1 + v2;
+  Vector3D p3 = p0 + v2;
+  Vector3D p4 = p0 + v3;
+  Vector3D p5 = p1 + v3;
+  Vector3D p6 = p2 + v3;
+  Vector3D p7 = p3 + v3;
+
+  Vector3D n1 = v2.cross(v1);
+  Vector3D n2 = v3.cross(v2);
+  Vector3D n3 = v1.cross(v3);
+
+  // comments are as if X-axis goes right, Y-axis goes away from viewer, Z-axis goes up
+
+  glNormal3dv(&n1[0]);
+  glVertex3d(p0[0], p0[1], p0[2]);
+  glVertex3dv(&p3[0]);
+  glVertex3dv(&p2[0]);
+  glVertex3dv(&p1[0]);
+
+  glNormal3dv(&n2[0]);
+  glVertex3d(p0[0], p0[1], p0[2]);
+  glVertex3dv(&p4[0]);
+  glVertex3dv(&p7[0]);
+  glVertex3dv(&p3[0]);
+
+  glNormal3dv(&n3[0]);
+  glVertex3d(p0[0], p0[1], p0[2]);
+  glVertex3dv(&p1[0]);
+  glVertex3dv(&p5[0]);
+  glVertex3dv(&p4[0]);
+
+  glNormal3d(-n1[0], -n1[1], -n1[2]);
+  glVertex3dv(&p4[0]);
+  glVertex3dv(&p5[0]);
+  glVertex3dv(&p6[0]);
+  glVertex3dv(&p7[0]);
+
+  glNormal3d(-n2[0], -n2[1], -n2[2]);
+  glVertex3dv(&p1[0]);
+  glVertex3dv(&p2[0]);
+  glVertex3dv(&p6[0]);
+  glVertex3dv(&p5[0]);
+
+  glNormal3d(-n3[0], -n3[1], -n3[2]);
+  glVertex3dv(&p3[0]);
+  glVertex3dv(&p7[0]);
+  glVertex3dv(&p6[0]);
+  glVertex3dv(&p2[0]);
+
+  glEnd();
+}
+
 }
 
 Viewer::Viewer(Game& game)
 : isGlInit (false),
-  game (game) {
+  game (game),
+  camera (1, 0, 0) {
     Glib::RefPtr<Gdk::GL::Config> glconfig;
 
     // Ask for an OpenGL Setup with
@@ -544,8 +602,24 @@ void Viewer::scene(bool lighting) {
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslated(0.0, 0.0, -7.0);
-    glRotated(r, 1, 0.2, 0);
+    /*glTranslated(0.0, 0.0, -7.0);
+    glRotated(r, 1, 0.2, 0);*/
+
+    const Segment* seg = game.getPlayerSeg();
+    int side = game.getPlayerSide();
+    double t = game.getPlayerT();
+
+    Vector3D n = seg->n(t);
+    Vector3D d = seg->d(t);
+    n.rotate(d, side*M_PI*0.5);
+    Vector3D p = seg->p(t);
+    Vector3D g = p + 0.17 * n;
+
+    Vector3D c = g + 7*camera;
+
+    gluLookAt(c[0], c[1], c[2],
+              g[0], g[1], g[2],
+              n[0], n[1], n[2]);
 
     drawLevel(game.getLevel(), lighting);
 }
@@ -663,15 +737,21 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     const Segment* seg = game.getPlayerSeg();
     int side = game.getPlayerSide();
-    double t = game.getTPlayer();
+    double t = game.getPlayerT();
 
     Vector3D n = seg->n(t);
     Vector3D d = seg->d(t);
+    n.rotate(d, side*M_PI*0.5);
     Vector3D p = seg->p(t);
-    Vector3D center = p + 0.3 * n;
+    Vector3D e = d.cross(n);
+    Vector3D p0 = p + 0.17 * n - 0.1*d - 0.1*e;
 
-    glTranslated(center[0], center[1], center[2]);
-    drawCube(0.2);
+    //glTranslated(center[0], center[1], center[2]);
+    //glRotated(30, 0, 0, 1);
+    glColor3f(0, 0, 1);
+//    drawCube(0.2);
+    drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
+    //drawParallelepiped(center, Vector3D(0.2,0,0), Vector3D(0,0,-0.2), Vector3D(0,0.2,0));
 
     glFlush();
 
@@ -679,8 +759,22 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     gldrawable->gl_end();
 
-    r += 1.3;
+    r += 0.5;
     cout << "r = " << r << endl;
+
+    /*
+    // update camera
+    int x, y;
+    get_pointer(x, y);
+    int dx = x - oldX;
+    int dy = y - oldY;
+    cout << "dx = " << dx << ", dy = " << dy << endl;
+    camera.rotate(n, dx*0.01);
+    camera.normalize();
+    cout << "camera: " << camera << endl;
+    oldX = x;
+    oldY = y;
+    */
 
     return true;
 }
@@ -688,7 +782,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 bool Viewer::on_configure_event(GdkEventConfigure* event) {
     Glib::RefPtr<Gdk::GL::Drawable> gldrawable = get_gl_drawable();
 
-    cout << "==> on_configure" << endl;
+    get_pointer(oldX, oldY);
 
     if (!gldrawable)
         return false;
@@ -702,6 +796,8 @@ bool Viewer::on_configure_event(GdkEventConfigure* event) {
 }
 
 bool Viewer::on_button_press_event(GdkEventButton* event) {
+    oldX = event->x;
+    oldY = event->y;
     return true;
 }
 
@@ -710,5 +806,13 @@ bool Viewer::on_button_release_event(GdkEventButton*) {
 }
 
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
+    int dx = event->x - oldX;
+    int dy = event->y - oldY;
+    Vector3D n = game.getPlayerSeg()->n(game.getPlayerT());
+    camera.rotate(n, dx*0.01);
+    camera.rotate(n.cross(camera), dy*0.01);
+    camera.normalize();
+    oldX = event->x;
+    oldY = event->y;
     return true;
 }
