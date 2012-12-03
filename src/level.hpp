@@ -2,7 +2,7 @@
 #define LEVEL_HPP_
 
 #include "algebra.hpp"
-#include <list>
+//#include <list>
 #include <vector>
 
 enum SegmentType {
@@ -113,7 +113,7 @@ private:
 
 class Level {
 public:
-    std::list<Segment*> segments;
+    std::vector<Segment*> segments;
     void calc();
 private:
 };

@@ -37,10 +37,7 @@ Game::Game() {
 }
 
 void Game::update(double dt) {
-    cout << "Game::update()" << endl;
-    cout << "up: " << keyStates[MoveForward] << endl;
-    cout << "playerT: " << playerT << endl;
-
+    //cout << "Game::update()" << endl;
     double move = dt * 0.8;
 
     if (keyStates[MoveForward])
