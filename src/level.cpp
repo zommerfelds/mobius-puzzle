@@ -244,12 +244,10 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
         if (b == 1)
             a_begin -= bSeg->a;
 
-        cout << "a_begin = " << a_begin << endl;
+        //cout << "a_begin = " << a_begin << endl;
         bSeg->calcTwist(a_begin);
 
         new_n_end = bSeg->n(indexEnd);
-
-        //cout << "a_begin = " << a_begin << endl;
     } else if (seg->getType() == STRAIGHT) {
         StraightSegment* sSeg = static_cast<StraightSegment*>(seg);
         sSeg->calc(n_end);

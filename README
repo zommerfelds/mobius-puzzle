@@ -3,13 +3,15 @@ Student Number: 20493973
 User-id: cgzommer
 Assignment: 5
 
-The final executable was compiled on this machine: 
+The final executable was compiled on this machine: gl11
 
 How to invoke my program: 
 ./game
 
 How to use my extra features: 
-
+Click on the according menu entries to see the effect.
+Game controls: arrow keys
+More in docs/Report.pdf
 
 I have created the following data files, which are in the data directory:
 - data/*.data: Raw image file in RGB formal generated from the images in data/orig/

@@ -39,6 +39,7 @@ Game::Game(int l)
         level.segments.push_back(seg2);
 
         playerSeg = seg1;
+        playerSide = 2;
         break;
     }
 
@@ -134,8 +135,8 @@ void Game::update(double dt) {
             playerT = 1;
         } else {
             playerSide = (playerSide - playerSeg->getSideDiff(1) + 4) % 4;
-            cout << "playerSide = " << playerSide << endl;
-            cout << "playerSeg->isSwitched(1) = " << playerSeg->isSwitched(1) << endl;
+            //cout << "playerSide = " << playerSide << endl;
+            //cout << "playerSeg->isSwitched(1) = " << playerSeg->isSwitched(1) << endl;
             if (playerSeg->isSwitched(1)) {
                 playerDir *= -1;
                 playerT = 1;
@@ -151,7 +152,7 @@ void Game::update(double dt) {
             playerT = 0;
         } else {
             playerSide = (playerSide - playerSeg->getSideDiff(0) + 4) % 4;
-            cout << "playerSide = " << playerSide << endl;
+            //cout << "playerSide = " << playerSide << endl;
             if (playerSeg->isSwitched(0)) {
                 playerDir *= -1;
                 playerT = 0;
