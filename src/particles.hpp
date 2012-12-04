@@ -5,7 +5,7 @@
 
 class Level;
 
-const int numParticles = 100;
+const int numParticles = 200;
 
 class Particle {
 public:

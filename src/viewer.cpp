@@ -261,12 +261,16 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
 
             glBegin(GL_QUADS);
 
-            for (size_t i = 0; i < 4; i++) {
+            for (size_t c = 0; c < 4; c++) {
 
-                if (lightAndTex)
-                    glColor3f(colours[i].R(), colours[i].G(), colours[i].B());
+                if (lightAndTex) {
+                    int side = c;
+                    if (c == 1 && s.isSwitched()) side = 3;
+                    if (c == 3 && s.isSwitched()) side = 1;
+                    glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
+                }
 
-                switch (i) {
+                switch (c) {
                 case 1: glNormal3dv(&e[0]); break;
                 case 2: glNormal3d(-n[0],-n[1],-n[2]); break;
                 case 3: glNormal3d(-e[0],-e[1],-e[2]); break;
@@ -274,21 +278,60 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
                 }
 
                 glTexCoord2f (tex1, 0.0);
-                glVertex3dv(&l[(i+3)%4][0]);
+                glVertex3dv(&l[(c+3)%4][0]);
                 glTexCoord2f (tex0, 0.0);
-                glVertex3dv(&q[(i+3)%4][0]);
+                glVertex3dv(&q[(c+3)%4][0]);
                 glTexCoord2f (tex0, 0.2);
-                glVertex3dv(&q[i][0]);
+                glVertex3dv(&q[c][0]);
                 glTexCoord2f (tex1, 0.2);
-                glVertex3dv(&l[i][0]);
+                glVertex3dv(&l[c][0]);
 
             }
 
             glEnd();
         }
+        else { // i = 0
+            if (s.adj[0] == NULL) {
+                // draw front cap
+                glColor3f(1, 0, 0);
 
-        for (size_t i = 0; i < 4; i++)
-            q[i] = l[i];
+                glBegin(GL_QUADS);
+
+                glNormal3d(-d[0],-d[1],-d[2]);
+                glTexCoord2f (0, 0);
+                glVertex3dv(&l[0][0]);
+                glTexCoord2f (0, 0.2);
+                glVertex3dv(&l[3][0]);
+                glTexCoord2f (0.2, 0.2);
+                glVertex3dv(&l[2][0]);
+                glTexCoord2f (0.2, 0);
+                glVertex3dv(&l[1][0]);
+
+                glEnd();
+            }
+        }
+
+        for (size_t x = 0; x < 4; x++)
+            q[x] = l[x];
+
+        if (i == (s.num() - 1) && s.adj[1] == NULL) {
+            // draw end cap
+            glColor3f(1, 0, 0);
+
+            glBegin(GL_QUADS);
+
+            glNormal3d(d[0],d[1],d[2]);
+            glTexCoord2f (0, 0);
+            glVertex3dv(&l[1][0]);
+            glTexCoord2f (0, 0.2);
+            glVertex3dv(&l[2][0]);
+            glTexCoord2f (0.2, 0.2);
+            glVertex3dv(&l[3][0]);
+            glTexCoord2f (0.2, 0);
+            glVertex3dv(&l[0][0]);
+
+            glEnd();
+        }
     }
 }
 
@@ -615,6 +658,8 @@ void Viewer::createDrawBuffer() {
         // Poor filtering. Needed !
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
         // Set "renderedTexture" as our colour attachement #0
         glFramebufferTextureARB(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fboTex[i], 0);

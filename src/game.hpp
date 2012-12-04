@@ -19,9 +19,10 @@ public:
     void setKey(Key key, bool pressed);
 private:
     Level level;
-    const Segment* playerSeg;
+    Segment* playerSeg;
     double playerT;
     int playerSide;
+    int playerSideT;
 
     bool keyStates[NUM_KEYS];
 };

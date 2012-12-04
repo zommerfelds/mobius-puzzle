@@ -53,14 +53,16 @@ void ParticleSystem::update(double dt) {
 void ParticleSystem::draw() {
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
-    glBegin(GL_POINTS);
 
 
     BOOST_FOREACH(Particle& p, particles) {
         double c = 1-p.a/p.max;
+        glPointSize(sqrt(c)*10.0);
+        glBegin(GL_POINTS);
+
         glColor3f(c,c,c);
         glVertex3dv(&p.pos[0]);
-    }
 
-    glEnd();
+        glEnd();
+    }
 }

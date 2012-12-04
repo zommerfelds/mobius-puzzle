@@ -67,6 +67,7 @@ BezierSegment::BezierSegment(const Vector3D curve[4], double a)
 : TwistSegment(a) {
     for (size_t i = 0; i < 4; i++)
         c[i] = curve[i];
+    calcUntwisted();
 }
 
 Vector3D BezierSegment::p(double t) const {
@@ -154,6 +155,99 @@ void TSegment::calc(const Vector3D& n_begin) {
     this->n_begin = n_begin;
 }
 
+void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) {
+    cout << "== In calcRec ==" << endl;
+
+    cout << "p_end = " << p_end << "; p(0) = " << seg->p((size_t)0) << endl;
+
+    size_t indexStart, indexEnd;
+    Segment* next, * prev;
+    if ((p_end - seg->p((size_t)0)).length2() < 0.001) {
+        cout << "> regular" << endl;
+        indexStart = 0;
+        indexEnd = seg->num() - 1;
+        next = seg->adj[1];
+        prev = seg->adj[0];
+    } else {
+        cout << "> switched" << endl;
+        indexStart = seg->num() - 1;
+        indexEnd = 0;
+        next = seg->adj[0];
+        prev = seg->adj[1];
+        seg->switched = true;
+    }
+
+    if (seg->visited) {
+        cout << "- already visited" << endl;
+        Vector3D n_begin = seg->n(indexStart);
+        double angle = acos(n_begin.dot(n_end));
+        if (n_begin.cross(n_end).dot(seg->d(indexStart)) < 0) // XXX see below
+            angle *= -1;
+        cout << "angle: " << angle/M_PI*180 << endl;
+
+        cout << "num = " << angle + M_PI*2 << "; denom = " << M_PI*0.5 << endl;
+        double mod = fmod(angle + M_PI*2 + 0.001, M_PI*0.5);
+        cout << "mod = " << mod << endl;
+        if (mod > 0.01)
+            assert(0); // angles not matching
+
+        double div = angle/(M_PI*0.5);
+        int divI = (int)(div + 4.5) % 4;
+        cout << "div = " << div << "; divI = " << divI << endl;
+        seg->sideDiff[seg->switched?1:0] = divI;
+
+        cout << "sideDiff[0] = " << seg->sideDiff[0] << endl
+             << "sideDiff[1] = " << seg->sideDiff[1] << endl;
+
+        return;
+    }
+
+    cout << "- not visited" << endl;
+
+    seg->visited = true;
+
+    //seg->prevSideDiff = 0; // XXX
+    //seg->nextSideDiff = 0; // TODO
+
+    Vector3D new_n_end;
+
+    if (seg->getType() == BEZIER) {
+        BezierSegment* bSeg = static_cast<BezierSegment*>(seg);
+        //bSeg->calcUntwisted();
+
+        const Vector3D& n_begin = bSeg->n(indexStart);
+
+        //cout << "n_begin = " << n_begin << ", n_end = " << n_end << endl;
+
+        double a_begin = acos(n_begin.dot(n_end));
+        if (n_begin.cross(n_end).dot(bSeg->d(indexStart)) < 0) // XXX ^ seg->switched
+            a_begin *= -1;
+
+        if (seg->switched)
+            a_begin -= bSeg->a;
+
+        bSeg->calcTwist(a_begin);
+
+        new_n_end = bSeg->n(bSeg->num() - 1);
+
+        //cout << "a_begin = " << a_begin << endl;
+    } else if (seg->getType() == STRAIGHT) {
+        StraightSegment* sSeg = static_cast<StraightSegment*>(seg);
+        sSeg->calc(n_end);
+    } else if (seg->getType() == T) {
+        TSegment* tSeg = static_cast<TSegment*>(seg);
+        tSeg->calc(n_end);
+    }
+
+    seg->sideDiff[0] = 0;
+    seg->sideDiff[1] = 0;
+
+    if (next != NULL)
+        calcRec(next, new_n_end, seg->p(indexEnd));
+    if (prev != NULL)
+        calcRec(prev, n_end, seg->p(indexStart)); // this is just used for the first segment (where prev hasn't been visited yet)
+}
+
 void Level::calc() {
     //cout << "Calculating level" << endl;
 
@@ -161,9 +255,17 @@ void Level::calc() {
         return;
 
     Segment* seg = segments.front();
-    Vector3D n_end;
 
+    assert (seg->getType() == BEZIER);
+    Vector3D n_end = seg->n((size_t)0);
+    Vector3D p_end = seg->p((size_t)0);
+
+    calcRec(seg, n_end, p_end);
+
+    /*
     while (seg != NULL) {
+        seg->prevSideDiff = 0;
+        seg->nextSideDiff = 0;
         if (seg->getType() == BEZIER) {
             BezierSegment* bSeg = static_cast<BezierSegment*>(seg);
             bSeg->calcUntwisted();
@@ -202,5 +304,5 @@ void Level::calc() {
         }
 
         seg = seg->next;
-    }
+    }*/
 }

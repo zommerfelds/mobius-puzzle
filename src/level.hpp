@@ -19,12 +19,11 @@ const size_t nBezierSegments = 21;
 
 class Segment {
 public:
+    Segment() : switched (false), visited (false) { adj[0] = NULL; adj[1] = NULL; }
     virtual SegmentType getType() const = 0;
-    Segment() : next (NULL), prev (NULL) {}
     virtual ~Segment() {}
 
-    Segment* next; // can be NULL
-    Segment* prev; // can be NULL
+    Segment* adj[2]; // can be NULLs
 
     virtual size_t num() const = 0;
     virtual Vector3D p(size_t i) const = 0;
@@ -34,6 +33,17 @@ public:
     virtual Vector3D p(double t) const;
     virtual Vector3D n(double t) const;
     virtual Vector3D d(double t) const;
+
+    bool isSwitched() const { return switched; }
+    int getSideDiff(size_t i) const { return sideDiff[i]; }
+
+private:
+    int sideDiff[2];
+
+    bool switched;
+    bool visited;
+
+    friend class Level;
 };
 
 class TwistSegment : public Segment {
@@ -94,7 +104,7 @@ public:
     TSegment(const Vector3D& start, const Vector3D& dir);
     SegmentType getType() const { return T; }
 
-    size_t num() const { return 1; }
+    size_t num() const { return 2; }
     Vector3D n(size_t i) const { return n_begin; }
     Vector3D p(size_t i) const { if(i == 0) return start; else return start + tLenght*dir; }
     Vector3D d(size_t i) const { return dir; }
@@ -111,6 +121,8 @@ private:
     Vector3D start, dir;
     Vector3D n_begin;
 
+    int sideDiff[4];
+
     friend class Level;
 };
 
@@ -119,6 +131,7 @@ public:
     std::vector<Segment*> segments;
     void calc();
 private:
+    void calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end);
 };
 
 #endif

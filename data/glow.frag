@@ -16,10 +16,10 @@ const float pi = 3.14159265;
 // The following are all mutually exclusive macros for various 
 // seperable blurs of varying kernel size
 #if defined(VERTICAL_BLUR_9)
-const float numBlurPixelsPerSide = 30.0; // MODIFIED
+const float numBlurPixelsPerSide = 20.0; // MODIFIED
 const vec2  blurMultiplyVec      = vec2(0.0, 1.0);
 #elif defined(HORIZONTAL_BLUR_9)
-const float numBlurPixelsPerSide = 30.0;
+const float numBlurPixelsPerSide = 20.0;
 const vec2  blurMultiplyVec      = vec2(1.0, 0.0);
 #elif defined(VERTICAL_BLUR_7)
 const float numBlurPixelsPerSide = 3.0;
