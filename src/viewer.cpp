@@ -1185,7 +1185,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     n.rotate(d, side*M_PI*0.5);
     Vector3D p = seg->p(t);
     Vector3D e = d.cross(n);
-    Vector3D p0 = p + 0.14 * n - 0.1*d + (tt /*- 0.1*/)*e;
+    Vector3D p0 = p + 0.14 * n /*- 0.1*d*/ + (tt /*- 0.1*/)*e;
 
     //glTranslated(center[0], center[1], center[2]);
     //glRotated(30, 0, 0, 1);
