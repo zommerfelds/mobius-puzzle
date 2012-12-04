@@ -177,9 +177,9 @@ void drawParallelepiped(const Vector3D& p0, const Vector3D& v1, const Vector3D& 
 
 Viewer::Viewer(Game& game)
 : isGlInit (false),
-  game (game),
+  game (&game),
   camera (1, 0, 0),
-  particleSys (game.getLevel()),
+  particleSys ( new ParticleSystem(game.getLevel()) ),
   enableSkyBox (true),
   enableParticleSystem (true),
   glow (2) {
@@ -233,6 +233,12 @@ Colour colours[4] = {
     Colour(1, 1, 1)
 #endif
 };
+
+void Viewer::setGame(Game& g) {
+    game = &g;
+    delete particleSys;
+    particleSys = new ParticleSystem(game->getLevel() );
+}
 
 void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
 
@@ -594,7 +600,7 @@ void Viewer::drawTBlock(const TSegment& t, bool lightAndTex) {
 
 void Viewer::drawLevel(bool lightAndTex) {
     Vector3D n_end;
-    BOOST_FOREACH(Segment* segment, game.getLevel().segments) {
+    BOOST_FOREACH(Segment* segment, game->getLevel().segments) {
         switch (segment->getType()) {
         case BEZIER:
             //curve = static_cast<const Curve*>(static_cast<const BezierSegment*>(segment));
@@ -678,13 +684,13 @@ void Viewer::on_realize() {
     glActiveTexture(GL_TEXTURE0);
 
     shaderMgr.useShader("glowHBig");
-    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.setParam("tex", 0);
     shaderMgr.useShader("glowVBig");
-    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.setParam("tex", 0);
     shaderMgr.useShader("glowHSmall");
-    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.setParam("tex", 0);
     shaderMgr.useShader("glowVSmall");
-    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.setParam("tex", 0);
 
     shaderMgr.useShader(ShaderManager::defaultShader);
 
@@ -814,9 +820,9 @@ void Viewer::setProjAndModelViewMatrix() {
     /*glTranslated(0.0, 0.0, -7.0);
     glRotated(r, 1, 0.2, 0);*/
 
-    const Segment* seg = game.getPlayerSeg();
-    int side = game.getPlayerSide();
-    double t = game.getPlayerT();
+    const Segment* seg = game->getPlayerSeg();
+    int side = game->getPlayerSide();
+    double t = game->getPlayerT();
 
     Vector3D n = seg->n(t);
     Vector3D d = seg->d(t);
@@ -839,7 +845,7 @@ void Viewer::scene(bool lightAndTex) {
     drawLevel(lightAndTex);
 
     if (enableParticleSystem && (!lightAndTex || glow == 0))
-        particleSys.draw();
+        particleSys->draw();
 }
 
 void Viewer::drawSkyBox() {
@@ -949,7 +955,7 @@ void Viewer::drawRobot() {
     double r4 = 0.04*0.6;
     double l2 = 0.2;
     double slices = 16;
-    double w = game.getPlayerWheel();
+    double w = game->getPlayerWheel();
 
     glColor3f(1, 1, 1);
     glEnable(GL_LIGHTING);
@@ -1169,17 +1175,17 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     scene(true);
 
-    const Segment* seg = game.getPlayerSeg();
-    int side = game.getPlayerSide();
-    double t = game.getPlayerT();
-    double tt = game.getPlayerTT();
+    const Segment* seg = game->getPlayerSeg();
+    int side = game->getPlayerSide();
+    double t = game->getPlayerT();
+    double tt = game->getPlayerTT();
 
     Vector3D n = seg->n(t);
     Vector3D d = seg->d(t);
     n.rotate(d, side*M_PI*0.5);
     Vector3D p = seg->p(t);
     Vector3D e = d.cross(n);
-    Vector3D p0 = p + 0.15 * n - 0.1*d + (tt /*- 0.1*/)*e;
+    Vector3D p0 = p + 0.14 * n - 0.1*d + (tt /*- 0.1*/)*e;
 
     //glTranslated(center[0], center[1], center[2]);
     //glRotated(30, 0, 0, 1);
@@ -1204,7 +1210,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     printOpenGLError();
 
-    particleSys.update(0.05);
+    particleSys->update(0.05);
 
     printOpenGLError();
 
@@ -1266,9 +1272,9 @@ double sign(double x) {
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
     int dx = event->x - oldX;
     int dy = event->y - oldY;
-    Vector3D n = game.getPlayerSeg()->n(game.getPlayerT());
-    Vector3D d = game.getPlayerSeg()->d(game.getPlayerT());
-    n.rotate(d, M_PI * 0.5 * game.getPlayerSide());
+    Vector3D n = game->getPlayerSeg()->n(game->getPlayerT());
+    Vector3D d = game->getPlayerSeg()->d(game->getPlayerT());
+    n.rotate(d, M_PI * 0.5 * game->getPlayerSide());
     float speed = 0.01;
     camera.rotate(n, -dx*speed);
     Vector3D axis2 = n.cross(camera);

@@ -28,6 +28,8 @@ public:
   // call when the time is right.
   void invalidate();
   
+  void setGame(Game& g);
+
   void toggleSkyBox() { enableSkyBox = !enableSkyBox; }
   void toggleParticleSystem() { enableParticleSystem = !enableParticleSystem; }
   void setGlow(int g) { glow = g; }
@@ -69,7 +71,7 @@ private:
   sigc::connection timerConnection;
   ShaderManager shaderMgr;
 
-  Game& game;
+  Game* game;
 
   GLuint fbo[2];
   GLuint fboTex[2];
@@ -80,7 +82,7 @@ private:
   int oldX;
   int oldY;
 
-  ParticleSystem particleSys;
+  ParticleSystem* particleSys;
 
   bool enableSkyBox;
   bool enableParticleSystem;

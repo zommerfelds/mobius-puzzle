@@ -11,7 +11,7 @@ enum Key {
 
 class Game {
 public:
-    Game();
+    Game(int level);
     void update(double dt);
     Level& getLevel() { return level; }
     const Segment* getPlayerSeg() const { return playerSeg; }

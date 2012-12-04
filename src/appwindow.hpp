@@ -24,7 +24,7 @@ private:
   enum Speed { SLOW=0, MEDIUM, FAST };
 
   bool update();
-  void setSpeed(Speed s);
+  void setLevel(int l);
 
   // A "vertical box" which holds everything in our window
   Gtk::VBox vbox;
@@ -33,11 +33,12 @@ private:
   Gtk::MenuBar menubar;
   // Each menu itself
   Gtk::Menu menuApp;
+  Gtk::Menu menuLevel;
   Gtk::Menu menuOptions;
   
   sigc::connection timerConnection;
   
-  Game game;
+  Game* game;
 
   // The main OpenGL area
   Viewer viewer;

@@ -7,8 +7,8 @@
 using namespace std;
 
 AppWindow::AppWindow()
-: game (),
-  viewer(game) {
+: game ( new Game(0) ),
+  viewer(*game) {
     set_title("CS488 Project");
 
     // A utility class for constructing things that go into menus, which
@@ -37,11 +37,11 @@ AppWindow::AppWindow()
     // glow
     sigc::slot1<void, int> set_glow_slot = sigc::mem_fun(viewer, &Viewer::setGlow);
     Gtk::RadioButtonGroup set_glow_group;
-    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_No Glow", Gtk::AccelKey("1"),
+    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_No Glow", Gtk::AccelKey("F1"),
       sigc::bind( set_glow_slot, 0 ) ) );
-    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_Small Glow", Gtk::AccelKey("2"),
+    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_Small Glow", Gtk::AccelKey("F2"),
       sigc::bind( set_glow_slot, 1 ) ) );
-    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_Big Glow", Gtk::AccelKey("3"),
+    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_Big Glow", Gtk::AccelKey("F3"),
       sigc::bind( set_glow_slot, 2 ) ) );
     Gtk::RadioMenuItem* bigGlow = static_cast<Gtk::RadioMenuItem*>(&menuOptions.items().back());
     bigGlow->set_active();
@@ -54,8 +54,19 @@ AppWindow::AppWindow()
     enPartSys->set_active();
     enPartSys->signal_toggled().connect(sigc::mem_fun( viewer, &Viewer::toggleParticleSystem ));
 
+    // level
+    sigc::slot1<void, int> set_level_slot = sigc::mem_fun(this, &AppWindow::setLevel);
+    Gtk::RadioButtonGroup set_level_group;
+    menuLevel.items().push_back( RadioMenuElem(set_level_group, "Level _1", Gtk::AccelKey("1"),
+      sigc::bind( set_level_slot, 0 ) ) );
+    menuLevel.items().push_back( RadioMenuElem(set_level_group, "Level _2", Gtk::AccelKey("2"),
+      sigc::bind( set_level_slot, 1 ) ) );
+    menuLevel.items().push_back( RadioMenuElem(set_level_group, "Level _3", Gtk::AccelKey("3"),
+      sigc::bind( set_level_slot, 2 ) ) );
+
     // Set up the menu bar
     menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", menuApp));
+    menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Level", menuLevel));
     menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Options", menuOptions));
 
     // First add the vertical box as our single "top" widget
@@ -73,8 +84,14 @@ AppWindow::AppWindow()
             sigc::mem_fun(this, &AppWindow::update), 20);
 }
 
+void AppWindow::setLevel(int l) {
+    delete game;
+    game = new Game(l);
+    viewer.setGame(*game);
+}
+
 bool AppWindow::update() {
-    game.update(0.02);
+    game->update(0.02);
     viewer.invalidate();
     return true;// do not disconnect handler
 }
@@ -89,19 +106,19 @@ bool AppWindow::handleKey(GdkEventKey* ev) {
     // keys you want to process
     switch( ev->keyval ) {
     case GDK_KEY_Up:
-        game.setKey(MoveForward, pressed);
+        game->setKey(MoveForward, pressed);
         break;
     case GDK_KEY_Down:
-        game.setKey(MoveBackward, pressed);
+        game->setKey(MoveBackward, pressed);
         break;
      case GDK_KEY_Left:
-         game.setKey(MoveLeft, pressed);
+         game->setKey(MoveLeft, pressed);
          break;
      case GDK_KEY_Right:
-         game.setKey(MoveRight, pressed);
+         game->setKey(MoveRight, pressed);
          break;
      /*case ' ':
-     m_game.drop(); break;*/
+     m_game->drop(); break;*/
      default:
          if (pressed)
              return Gtk::Window::on_key_press_event( ev );

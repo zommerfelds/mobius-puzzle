@@ -230,8 +230,10 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
 
     seg->visited = true;
 
-    seg->switched[0] = isNear(seg->adj[0]->p((size_t)0), seg->p((size_t)0));
-    seg->switched[1] = !isNear(seg->adj[1]->p((size_t)0), seg->p(seg->num()-1));
+    if (seg->adj[0])
+        seg->switched[0] = isNear(seg->adj[0]->p((size_t)0), seg->p((size_t)0));
+    if (seg->adj[1])
+        seg->switched[1] = !isNear(seg->adj[1]->p((size_t)0), seg->p(seg->num()-1));
 
     cout << "switched[0] = " << seg->switched[0] << endl;
     cout << "switched[1] = " << seg->switched[1] << endl;
