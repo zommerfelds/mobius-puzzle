@@ -27,6 +27,10 @@ public:
   // call when the time is right.
   void invalidate();
   
+  void toggleSkyBox() { enableSkyBox = !enableSkyBox; }
+  void toggleParticleSystem() { enableParticleSystem = !enableParticleSystem; }
+  void setGlow(int g) { glow = g; }
+
 protected:
 
   // Events we implement
@@ -75,6 +79,10 @@ private:
   int oldY;
 
   ParticleSystem particleSys;
+
+  bool enableSkyBox;
+  bool enableParticleSystem;
+  int glow;
 };
 
 #endif

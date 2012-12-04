@@ -56,8 +56,8 @@ Game::Game()
 
     Vector3D c1[] = { Vector3D(0, 0, 0),
                       Vector3D(2, 0, 0),
-                      Vector3D(2, 2, 0),
-                      Vector3D(0, 2, 0) };
+                      Vector3D(2, 1, 2),
+                      Vector3D(0, 1, 2) };
 
 /*
     Vector3D c2[] = { Vector3D(-0, 0, 0),
@@ -66,10 +66,10 @@ Game::Game()
                       Vector3D( 0, 2, 0) };
 
 */
-    Vector3D c2[] = { Vector3D(0, 2, 0),
-                      Vector3D(-2, 2, 0),
+    Vector3D c2[] = { Vector3D( 0, 1, 2),
+                      Vector3D(-2, 1, 2),
                       Vector3D(-2, 0, 0),
-                      Vector3D(0, 0, 0) };
+                      Vector3D( 0, 0, 0) };
 
     BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.25);
     BezierSegment* seg2 = new BezierSegment(c2, M_PI*0.25);
@@ -85,7 +85,7 @@ Game::Game()
 
     playerSeg = seg1;
     playerT = 0.1;
-    playerSide = 0;
+    playerSide = 2;
     playerSide2 = 0;
     playerTT = 0.0;
 }

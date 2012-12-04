@@ -16,27 +16,60 @@ AppWindow::AppWindow()
     using Gtk::Menu_Helpers::MenuElem;
     using Gtk::Menu_Helpers::RadioMenuElem;
     using Gtk::Menu_Helpers::CheckMenuElem;
+    using Gtk::Menu_Helpers::SeparatorElem;
 
     // Set up the Application menu
     // The slot we use here just causes AppWindow::hide() on this,
     // which shuts down the application.
-    m_menu_app.items().push_back(
+    menuApp.items().push_back(
             MenuElem("_Quit", Gtk::AccelKey("q"),
                     sigc::mem_fun(*this, &AppWindow::hide)));
-    // Pack in our widgets
+
+
+    // sky box
+    menuOptions.items().push_back( CheckMenuElem("Enable _Sky Box", Gtk::AccelKey("s")) );
+    Gtk::CheckMenuItem* enSkyBox = static_cast<Gtk::CheckMenuItem*>(&menuOptions.items().back());
+    enSkyBox->set_active();
+    enSkyBox->signal_toggled().connect(sigc::mem_fun( viewer, &Viewer::toggleSkyBox ));
+
+    menuOptions.items().push_back( SeparatorElem() );
+
+    // glow
+    sigc::slot1<void, int> set_glow_slot = sigc::mem_fun(viewer, &Viewer::setGlow);
+    Gtk::RadioButtonGroup set_glow_group;
+    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_No Glow", Gtk::AccelKey("1"),
+      sigc::bind( set_glow_slot, 0 ) ) );
+    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_Small Glow", Gtk::AccelKey("2"),
+      sigc::bind( set_glow_slot, 1 ) ) );
+    menuOptions.items().push_back( RadioMenuElem(set_glow_group, "_Big Glow", Gtk::AccelKey("3"),
+      sigc::bind( set_glow_slot, 2 ) ) );
+    Gtk::RadioMenuItem* bigGlow = static_cast<Gtk::RadioMenuItem*>(&menuOptions.items().back());
+    bigGlow->set_active();
+
+    menuOptions.items().push_back( SeparatorElem() );
+
+    // particle system
+    menuOptions.items().push_back( CheckMenuElem("Enable _Particle System", Gtk::AccelKey("p")) );
+    Gtk::CheckMenuItem* enPartSys = static_cast<Gtk::CheckMenuItem*>(&menuOptions.items().back());
+    enPartSys->set_active();
+    enPartSys->signal_toggled().connect(sigc::mem_fun( viewer, &Viewer::toggleParticleSystem ));
+
+    // Set up the menu bar
+    menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", menuApp));
+    menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Options", menuOptions));
 
     // First add the vertical box as our single "top" widget
-    add(m_vbox);
+    add(vbox);
 
     // Put the menubar on the top, and make it as small as possible
-    m_vbox.pack_start(m_menubar, Gtk::PACK_SHRINK);
+    vbox.pack_start(menubar, Gtk::PACK_SHRINK);
 
     set_default_size(500, 500);
-    m_vbox.pack_start(viewer);
+    vbox.pack_start(viewer);
 
     show_all();
 
-    m_timerConnection = Glib::signal_timeout().connect(
+    timerConnection = Glib::signal_timeout().connect(
             sigc::mem_fun(this, &AppWindow::update), 20);
 }
 
@@ -70,7 +103,10 @@ bool AppWindow::handleKey(GdkEventKey* ev) {
      /*case ' ':
      m_game.drop(); break;*/
      default:
-         return Gtk::Window::on_key_press_event( ev );
+         if (pressed)
+             return Gtk::Window::on_key_press_event( ev );
+         else
+             return false;
      }
     //m_viewer.invalidate();
     return true;

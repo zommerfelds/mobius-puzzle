@@ -152,7 +152,10 @@ Viewer::Viewer(Game& game)
 : isGlInit (false),
   game (game),
   camera (1, 0, 0),
-  particleSys (game.getLevel()) {
+  particleSys (game.getLevel()),
+  enableSkyBox (true),
+  enableParticleSystem (true),
+  glow (2) {
     Glib::RefPtr<Gdk::GL::Config> glconfig;
 
     // Ask for an OpenGL Setup with
@@ -170,7 +173,7 @@ Viewer::Viewer(Game& game)
     // Accept the configuration
     set_gl_capability(glconfig);
 
-    camera = Vector3D(1, 1, 1);
+    camera = Vector3D(1, 0, -1);
     camera.normalize();
 
     // Register the fact that we want to receive these events
@@ -620,20 +623,33 @@ void Viewer::on_realize() {
     createDrawBuffer();
     loadTextures();
 
+    // load shaders
     list<string> defines;
-    defines.push_back("VERTICAL_BLUR_9");
-    shaderMgr.loadShader("glowV", "data/glow.vert", "data/glow.frag", defines);
+    defines.push_back("VERTICAL_BLUR");
+    defines.push_back("BLUR_BIG");
+    shaderMgr.loadShader("glowVBig", "data/glow.vert", "data/glow.frag", defines);
     defines.clear();
-    defines.push_back("HORIZONTAL_BLUR_9");
-    shaderMgr.loadShader("glowH", "data/glow.vert", "data/glow.frag", defines);
+    defines.push_back("HORIZONTAL_BLUR");
+    defines.push_back("BLUR_BIG");
+    shaderMgr.loadShader("glowHBig", "data/glow.vert", "data/glow.frag", defines);
+    defines.clear();
+    defines.push_back("VERTICAL_BLUR");
+    defines.push_back("BLUR_SMALL");
+    shaderMgr.loadShader("glowVSmall", "data/glow.vert", "data/glow.frag", defines);
+    defines.clear();
+    defines.push_back("HORIZONTAL_BLUR");
+    defines.push_back("BLUR_SMALL");
+    shaderMgr.loadShader("glowHSmall", "data/glow.vert", "data/glow.frag", defines);
 
-    shaderMgr.useShader("glowH");
     glActiveTexture(GL_TEXTURE0);
-    //glBindTexture(GL_TEXTURE_2D, tex[0]);
-    shaderMgr.setParam("blurSampler", 0);
 
-    shaderMgr.useShader("glowV");
-    //glBindTexture(GL_TEXTURE_2D, tex[1]);
+    shaderMgr.useShader("glowHBig");
+    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.useShader("glowVBig");
+    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.useShader("glowHSmall");
+    shaderMgr.setParam("blurSampler", 0);
+    shaderMgr.useShader("glowVSmall");
     shaderMgr.setParam("blurSampler", 0);
 
     shaderMgr.useShader(ShaderManager::defaultShader);
@@ -691,7 +707,7 @@ void Viewer::loadTextures() {
         // Give an empty image to OpenGL ( the last "0" )
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -775,7 +791,7 @@ void Viewer::scene(bool lightAndTex) {
 
     drawLevel(lightAndTex);
 
-    if (!lightAndTex)
+    if (!lightAndTex && enableParticleSystem)
         particleSys.draw();
 }
 
@@ -888,83 +904,90 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     // Clear the screen
     printOpenGLError();
 
+    if (glow > 0) {
+
     glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    glDisable(GL_TEXTURE_2D);
-    glViewport(0, 0, 512, 512);
-    //glViewport(0, 0, get_width(), get_height());
-    shaderMgr.useShader(ShaderManager::defaultShader);
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        glDisable(GL_TEXTURE_2D);
+        glViewport(0, 0, 512, 512);
+        //glViewport(0, 0, get_width(), get_height());
+        shaderMgr.useShader(ShaderManager::defaultShader);
 
-    printOpenGLError();
+        printOpenGLError();
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    scene(false);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        scene(false);
 
-    printOpenGLError();
-/*
-    GLint m_viewport[4];
-    glGetIntegerv( GL_VIEWPORT, m_viewport );
-    int width  = m_viewport[2];
-    int height =  m_viewport[3];
+        printOpenGLError();
+    /*
+        GLint m_viewport[4];
+        glGetIntegerv( GL_VIEWPORT, m_viewport );
+        int width  = m_viewport[2];
+        int height =  m_viewport[3];
 
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
-
-
-    // rgb image
-    glCopyTexImage2D(GL_TEXTURE_2D,0,GL_RGB,m_viewport[0],
-                    m_viewport[1], m_viewport[2], m_viewport[3],0);
-
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    char* raw_img = new char [width * height * 3];
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_img);
-
-    ofstream fout ("img",ios_base::binary);
-    fout.write(raw_img, width * height * 3);
-    delete raw_img;*/
-    //exit(0);
-/*
-    static int count = 0;
-    count++;
-    if (count == 10)
-        exit(0);*/
+        glBindTexture(GL_TEXTURE_2D, renderedTexture);
 
 
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo[1]);
-    glViewport(0, 0, 512, 512);
-    //glViewport(0, 0, get_width(), get_height());
+        // rgb image
+        glCopyTexImage2D(GL_TEXTURE_2D,0,GL_RGB,m_viewport[0],
+                        m_viewport[1], m_viewport[2], m_viewport[3],0);
 
-    printOpenGLError();
+        glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        char* raw_img = new char [width * height * 3];
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_img);
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0, 1, 0, 1);
+        ofstream fout ("img",ios_base::binary);
+        fout.write(raw_img, width * height * 3);
+        delete raw_img;*/
+        //exit(0);
+    /*
+        static int count = 0;
+        count++;
+        if (count == 10)
+            exit(0);*/
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
 
-    glDisable(GL_LIGHTING);
-    glEnable(GL_TEXTURE_2D);
-    glActiveTexture(GL_TEXTURE0);
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo[1]);
+        glViewport(0, 0, 512, 512);
+        //glViewport(0, 0, get_width(), get_height());
 
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        printOpenGLError();
 
-    shaderMgr.useShader("glowH");
-    //glColor4f(1.0f,1.0f,0,1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluOrtho2D(0, 1, 0, 1);
 
-    printOpenGLError();
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
 
-    glBindTexture(GL_TEXTURE_2D, fboTex[0]);
-    glBegin(GL_QUADS);
-    glTexCoord2f (0.0, 0.0);
-    glVertex3f(0.0f, 0.0f, 0.0f);
-    glTexCoord2f (1.0, 0.0);
-    glVertex3f(1.0f, 0.0f, 0.0f);
-    glTexCoord2f (1.0, 1.0);
-    glVertex3f(1.0f, 1.0f, 0.0f);
-    glTexCoord2f (0.0, 1.0);
-    glVertex3f(0.0f, 1.0f, 0.0f);
-    glEnd();
+        glDisable(GL_LIGHTING);
+        glEnable(GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+        switch (glow) {
+        //case 0: shaderMgr.useShader(ShaderManager::defaultShader); break;
+        case 1: shaderMgr.useShader("glowHSmall"); break;
+        case 2: shaderMgr.useShader("glowHBig"); break;
+        }
+        //glColor4f(1.0f,1.0f,0,1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        printOpenGLError();
+
+        glBindTexture(GL_TEXTURE_2D, fboTex[0]);
+        glBegin(GL_QUADS);
+        glTexCoord2f (0.0, 0.0);
+        glVertex3f(0.0f, 0.0f, 0.0f);
+        glTexCoord2f (1.0, 0.0);
+        glVertex3f(1.0f, 0.0f, 0.0f);
+        glTexCoord2f (1.0, 1.0);
+        glVertex3f(1.0f, 1.0f, 0.0f);
+        glTexCoord2f (0.0, 1.0);
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glEnd();
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, get_width(), get_height());
@@ -975,34 +998,41 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     setProjAndModelViewMatrix();
 
-    drawSkyBox();
+    if (enableSkyBox)
+        drawSkyBox();
     //drawParallelepiped(Vector3D(0,0,-5), Vector3D(1,0,0), Vector3D(0,1,0), Vector3D(0,0,1));
 
     printOpenGLError();
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0, 1, 0, 1);
+    if (glow > 0) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluOrtho2D(0, 1, 0, 1);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
 
-    shaderMgr.useShader("glowV");
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-    //glColor4f(1.0f,1.0f,0,1.0f);
-    glClear(GL_DEPTH_BUFFER_BIT);
+        switch (glow) {
+        //case 0: shaderMgr.useShader(ShaderManager::defaultShader); break;
+        case 1: shaderMgr.useShader("glowVSmall"); break;
+        case 2: shaderMgr.useShader("glowVBig"); break;
+        }
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+        //glColor4f(1.0f,1.0f,0,1.0f);
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-    glBindTexture(GL_TEXTURE_2D, fboTex[1]);
-    glBegin(GL_QUADS);
-    glTexCoord2f (0.0, 0.0);
-    glVertex3f(0.0f, 0.0f, 0.0f);
-    glTexCoord2f (1.0, 0.0);
-    glVertex3f(1.0f, 0.0f, 0.0f);
-    glTexCoord2f (1.0, 1.0);
-    glVertex3f(1.0f, 1.0f, 0.0f);
-    glTexCoord2f (0.0, 1.0);
-    glVertex3f(0.0f, 1.0f, 0.0f);
-    glEnd();
+        glBindTexture(GL_TEXTURE_2D, fboTex[1]);
+        glBegin(GL_QUADS);
+        glTexCoord2f (0.0, 0.0);
+        glVertex3f(0.0f, 0.0f, 0.0f);
+        glTexCoord2f (1.0, 0.0);
+        glVertex3f(1.0f, 0.0f, 0.0f);
+        glTexCoord2f (1.0, 1.0);
+        glVertex3f(1.0f, 1.0f, 0.0f);
+        glTexCoord2f (0.0, 1.0);
+        glVertex3f(0.0f, 1.0f, 0.0f);
+        glEnd();
+    }
 
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     shaderMgr.useShader(ShaderManager::defaultShader);

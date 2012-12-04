@@ -18,7 +18,7 @@ protected:
   virtual bool on_key_release_event( GdkEventKey *ev );
 
 private:
-  
+
   bool handleKey(GdkEventKey* ev);
 
   enum Speed { SLOW=0, MEDIUM, FAST };
@@ -27,17 +27,15 @@ private:
   void setSpeed(Speed s);
 
   // A "vertical box" which holds everything in our window
-  Gtk::VBox m_vbox;
+  Gtk::VBox vbox;
 
   // The menubar, with all the menus at the top of the window
-  Gtk::MenuBar m_menubar;
+  Gtk::MenuBar menubar;
   // Each menu itself
-  Gtk::Menu m_menu_app;
-  Gtk::Menu m_menu_draw_mode;
-  Gtk::Menu m_menu_speed;
-  Gtk::Menu m_menu_buffering;
+  Gtk::Menu menuApp;
+  Gtk::Menu menuOptions;
   
-  sigc::connection m_timerConnection;
+  sigc::connection timerConnection;
   
   Game game;
 
