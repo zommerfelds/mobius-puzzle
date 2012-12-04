@@ -16,6 +16,7 @@
 #include <GL/glew.h>
 #include <fstream>
 #include <vector>
+#include <sstream>
 using namespace std;
 
 namespace {
@@ -105,42 +106,68 @@ void drawParallelepiped(const Vector3D& p0, const Vector3D& v1, const Vector3D& 
   Vector3D n2 = v3.cross(v2);
   Vector3D n3 = v1.cross(v3);
 
+  //double m = max(v1.length(), max(v2.length(), v3.length()));
+
   // comments are as if X-axis goes right, Y-axis goes away from viewer, Z-axis goes up
 
   glNormal3dv(&n1[0]);
+  glTexCoord2d(0,0);
   glVertex3d(p0[0], p0[1], p0[2]);
+  glTexCoord2d(0,1);
   glVertex3dv(&p3[0]);
+  glTexCoord2d(1,1);
   glVertex3dv(&p2[0]);
+  glTexCoord2d(1,0);
   glVertex3dv(&p1[0]);
 
   glNormal3dv(&n2[0]);
+  glTexCoord2d(0,0);
   glVertex3d(p0[0], p0[1], p0[2]);
+  glTexCoord2d(0,1);
   glVertex3dv(&p4[0]);
+  glTexCoord2d(1,1);
   glVertex3dv(&p7[0]);
+  glTexCoord2d(1,0);
   glVertex3dv(&p3[0]);
 
   glNormal3dv(&n3[0]);
+  glTexCoord2d(0,0);
   glVertex3d(p0[0], p0[1], p0[2]);
+  glTexCoord2d(0,1);
   glVertex3dv(&p1[0]);
+  glTexCoord2d(1,1);
   glVertex3dv(&p5[0]);
+  glTexCoord2d(1,0);
   glVertex3dv(&p4[0]);
 
   glNormal3d(-n1[0], -n1[1], -n1[2]);
+  glTexCoord2d(0,0);
   glVertex3dv(&p4[0]);
+  glTexCoord2d(0,1);
   glVertex3dv(&p5[0]);
+  glTexCoord2d(1,1);
   glVertex3dv(&p6[0]);
+  glTexCoord2d(1,0);
   glVertex3dv(&p7[0]);
 
   glNormal3d(-n2[0], -n2[1], -n2[2]);
+  glTexCoord2d(0,0);
   glVertex3dv(&p1[0]);
+  glTexCoord2d(0,1);
   glVertex3dv(&p2[0]);
+  glTexCoord2d(1,1);
   glVertex3dv(&p6[0]);
+  glTexCoord2d(1,0);
   glVertex3dv(&p5[0]);
 
   glNormal3d(-n3[0], -n3[1], -n3[2]);
+  glTexCoord2d(0,0);
   glVertex3dv(&p3[0]);
+  glTexCoord2d(0,1);
   glVertex3dv(&p7[0]);
+  glTexCoord2d(1,1);
   glVertex3dv(&p6[0]);
+  glTexCoord2d(1,0);
   glVertex3dv(&p2[0]);
 
   glEnd();
@@ -654,6 +681,11 @@ void Viewer::on_realize() {
 
     shaderMgr.useShader(ShaderManager::defaultShader);
 
+    qobj = gluNewQuadric();
+    gluQuadricNormals(qobj, GLU_SMOOTH);
+    gluQuadricDrawStyle(qobj, GLU_FILL);
+    gluQuadricTexture(qobj, GL_TRUE);
+
     isGlInit = true;
 }
 
@@ -697,9 +729,10 @@ void Viewer::createDrawBuffer() {
 }
 
 void Viewer::loadTextures() {
-    glGenTextures(7, &tex[0]);
+    const size_t nTex = sizeof(tex)/sizeof(tex[0]);
+    glGenTextures(nTex, &tex[0]);
 
-    for (size_t i = 0; i < 7; i++) {
+    for (size_t i = 0; i < nTex; i++) {
 
         // "Bind" the newly created texture : all future texture functions will modify this texture
         glBindTexture(GL_TEXTURE_2D, tex[i]);
@@ -712,6 +745,9 @@ void Viewer::loadTextures() {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+        size_t width = 512;
+        if (i > 0 && i < 7)
+            width = 1024;
         string filename;
         switch (i) {
         case 0: filename = "data/Rainbow Shards.data"; break;
@@ -721,13 +757,12 @@ void Viewer::loadTextures() {
         case 4: filename = "data/nightsky_east.data"; break;
         case 5: filename = "data/nightsky_up.data"; break;
         case 6: filename = "data/nightsky_down.data"; break;
+        case 7: filename = "data/Optic Interconnect.data"; break;
+        case 8: filename = "data/wheel-md.data"; width = 256; break;
         }
-        int width = 512;
-        if (i > 0)
-            width = 1024;
 
         ifstream file( filename.c_str(), ios::binary );
-        if (!file) throw runtime_error("error reading texture '" + filename + "'");
+        if (!file) throw runtime_error("error reading file '" + filename + "'");
         // copies all data into buffer
         file.seekg (0, ios::end);
         size_t size = file.tellg();
@@ -735,6 +770,11 @@ void Viewer::loadTextures() {
         char* buffer = new char [size];
         file.read (buffer, size);
         file.close();
+        if(size != width*width*3) {
+            ostringstream err;
+            err << "error reading texture '" << filename << "': size (" << size << ") != width (" << width << ") ^ 2 * 3";
+            throw runtime_error(err.str().c_str());
+        }
 
         // Textur wird hier in die Grafikkarte geladen! Dabei werden Mipmaps generiert.
         gluBuild2DMipmaps(GL_TEXTURE_2D,                    // 2D Textur wird geladen
@@ -791,7 +831,7 @@ void Viewer::scene(bool lightAndTex) {
 
     drawLevel(lightAndTex);
 
-    if (!lightAndTex && enableParticleSystem)
+    if (enableParticleSystem && (!lightAndTex || glow == 0))
         particleSys.draw();
 }
 
@@ -888,6 +928,88 @@ void Viewer::drawSkyBox() {
     glTexCoord2f (t1, t1);
     glVertex3f(d, -d, -d);
     glEnd();
+}
+
+void Viewer::drawRobot() {
+    double r = 0.035;
+    double l = 0.22;
+    double d = 0.075;
+    double x = 0.2;
+    double y = 0.2;
+    double h = 0.05;
+    double r2 = 0.1;
+    double r3 = 0.04;
+    double r4 = 0.04*0.6;
+    double l2 = 0.2;
+    double slices = 16;
+    double w = game.getPlayerWheel();
+
+    glColor3f(1, 1, 1);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+
+    glPushMatrix();
+
+    glTranslated(-d, r, -l/2);
+    for (size_t i = 0; i < 3; i++) {
+        glColor3f(0.55, 0.5, 0.5);
+
+        glBindTexture(GL_TEXTURE_2D, tex[7]);
+        glPushMatrix();
+        glRotated(w, 0, 0, -1);
+        gluCylinder(qobj, r, r, l, slices, 1);
+        gluQuadricOrientation(qobj, GLU_INSIDE);
+        glColor3f(1, 1, 1);
+        glBindTexture(GL_TEXTURE_2D, tex[8]);
+        gluDisk(qobj, 0, r, slices, 1);
+        gluQuadricOrientation(qobj, GLU_OUTSIDE);
+        glPushMatrix();
+        glTranslated(0, 0, l);
+        gluDisk(qobj, 0, r, slices, 1);
+        glPopMatrix();
+        glPopMatrix();
+        glTranslated(d, 0, 0);
+
+        glBindTexture(GL_TEXTURE_2D, tex[7]);
+        if (i == 0) {
+            glPushMatrix();
+            glTranslated(0, r + r2, l/2);
+            glColor3f(0.2, 0.5, 1);
+            gluSphere(qobj, r2, slices, slices);
+
+            glTranslated(0, -r2/2, 0);
+
+//            glColor3f(1, 1, 0);
+            glColor3f(0.1, 0.1, 0.1);
+
+            glPushMatrix();
+            glRotatef(-30, 1, 0, 0);
+            gluCylinder(qobj, r3, r4, l2, slices, 1);
+            glPushMatrix();
+            glTranslated(0, 0, l2);
+            gluDisk(qobj, 0, r4, slices, slices);
+            glPopMatrix();
+            glPopMatrix();
+            glPushMatrix();
+            glRotatef(30 + 180, 1, 0, 0);
+            gluCylinder(qobj, r3, r4, l2, slices, 1);
+            glPushMatrix();
+            glTranslated(0, 0, l2);
+            gluDisk(qobj, 0, r4, slices, slices);
+            glPopMatrix();
+            glPopMatrix();
+
+            glPopMatrix();
+
+            glPushMatrix();
+            glTranslated(-x/2, r, l/2-y/2);
+            glColor3f(0.1, 0.1, 0.1);
+            drawParallelepiped(Vector3D(), Vector3D(x, 0, 0), Vector3D(0, h, 0), Vector3D(0, 0, y));
+            glPopMatrix();
+        }
+    }
+
+    glPopMatrix();
 }
 
 bool Viewer::on_expose_event(GdkEventExpose*) {
@@ -1050,15 +1172,28 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     n.rotate(d, side*M_PI*0.5);
     Vector3D p = seg->p(t);
     Vector3D e = d.cross(n);
-    Vector3D p0 = p + 0.17 * n - 0.1*d + (tt - 0.1)*e;
+    Vector3D p0 = p + 0.15 * n - 0.1*d + (tt /*- 0.1*/)*e;
 
     //glTranslated(center[0], center[1], center[2]);
     //glRotated(30, 0, 0, 1);
-    glColor3f(0, 0, 1);
-    glDisable(GL_TEXTURE_2D);
+    //glColor3f(1, 1, 1);
+    //glEnable(GL_LIGHTING);
+    //glDisable(GL_TEXTURE_2D);
     //drawCube(0.2);
-    drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
+    //drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
     //drawParallelepiped(center, Vector3D(0.2,0,0), Vector3D(0,0,-0.2), Vector3D(0,0.2,0));
+    glPushMatrix();
+    Matrix4x4 m (
+            Vector4D(d[0], n[0], e[0], p0[0]),
+            Vector4D(d[1], n[1], e[1], p0[1]),
+            Vector4D(d[2], n[2], e[2], p0[2]),
+            Vector4D(0, 0, 0, 1)
+    );
+    glMultMatrixd(m.transpose().begin());
+    //glTranslated(p0[0], p0[1], p0[2]);
+    drawRobot();
+    //drawParallelepiped(Vector3D(), Vector3D(0.2,0,0), Vector3D(0,0.2,0), Vector3D(0,0,0.2));
+    glPopMatrix();
 
     printOpenGLError();
 

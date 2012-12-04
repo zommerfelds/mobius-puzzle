@@ -14,11 +14,12 @@ public:
     Game();
     void update(double dt);
     Level& getLevel() { return level; }
-    const Segment* getPlayerSeg() { return playerSeg; }
-    double getPlayerT() { return playerT; }
-    int getPlayerSide() { return playerSide; }
-    double getPlayerTT() { return playerTT; }
-    int getPlayerSide2() { return playerSide2; }
+    const Segment* getPlayerSeg() const { return playerSeg; }
+    double getPlayerT() const { return playerT; }
+    int getPlayerSide() const { return playerSide; }
+    double getPlayerTT() const { return playerTT; }
+    int getPlayerSide2() const { return playerSide2; }
+    double getPlayerWheel() const { return playerWheel; }
 
     void setKey(Key key, bool pressed);
 private:
@@ -29,6 +30,7 @@ private:
     int playerSide2;
     double playerTT;
     int playerDir;
+    double playerWheel;
 
     bool keyStates[NUM_KEYS];
 };

@@ -3,7 +3,8 @@
 using namespace std;
 
 Game::Game()
-: playerDir (1) {
+: playerDir (1),
+  playerWheel (0.0) {
     for (size_t i = 0; i < NUM_KEYS; i++)
         keyStates[i] = false;
 
@@ -93,12 +94,16 @@ Game::Game()
 void Game::update(double dt) {
     //cout << "Game::update()" << endl;
     double move = dt * 0.8;
+    double wheelMove = dt * 1000.0;
     move *= playerDir;
 
-    if (keyStates[MoveForward])
+    if (keyStates[MoveForward]) {
         playerT += move;
-    else if (keyStates[MoveBackward])
+        playerWheel += wheelMove;
+    } else if (keyStates[MoveBackward]) {
         playerT -= move;
+        playerWheel -= wheelMove;
+    }
 
     if (playerT > 1) {
         if (playerSeg->adj[1] == NULL) {

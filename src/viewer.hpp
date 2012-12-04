@@ -14,6 +14,7 @@
 class Game;
 class Segment;
 class TSegment;
+class GLUquadric;
 
 // The "main" OpenGL widget
 class Viewer : public Gtk::GL::DrawingArea {
@@ -63,6 +64,7 @@ private:
   void drawTBlock(const TSegment& t, bool lightAndTex);
   void setProjAndModelViewMatrix();
   void drawSkyBox();
+  void drawRobot();
 
   sigc::connection timerConnection;
   ShaderManager shaderMgr;
@@ -71,7 +73,7 @@ private:
 
   GLuint fbo[2];
   GLuint fboTex[2];
-  GLuint tex[7];
+  GLuint tex[9];
 
   Vector3D camera;
 
@@ -83,6 +85,8 @@ private:
   bool enableSkyBox;
   bool enableParticleSystem;
   int glow;
+
+  GLUquadric* qobj;
 };
 
 #endif
