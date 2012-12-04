@@ -294,10 +294,17 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
             for (size_t c = 0; c < 4; c++) {
 
                 if (lightAndTex) {
-                    int side = c;
+
+                    Colour& c1 = colours[c];
+                    Colour& c2 = colours[(c-s.getSideDiff(1))%4];
+                    Colour colour = c1 * (1-tex0) + c2 * (tex0);
+                    //colour = c1;
+
+                    glColor3f(colour.R(), colour.G(), colour.B());
+
                     /*if (c == 1 && s.isSwitched()) side = 3;
                     if (c == 3 && s.isSwitched()) side = 1;*/
-                    glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
+                    //glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
                 }
 
                 switch (c) {
