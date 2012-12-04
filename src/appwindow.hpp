@@ -25,6 +25,8 @@ private:
 
   bool update();
   void setLevel(int l);
+  void about();
+  void credits();
 
   // A "vertical box" which holds everything in our window
   Gtk::VBox vbox;
@@ -35,6 +37,7 @@ private:
   Gtk::Menu menuApp;
   Gtk::Menu menuLevel;
   Gtk::Menu menuOptions;
+  Gtk::Menu menuAbout;
   
   sigc::connection timerConnection;
   

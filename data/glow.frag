@@ -9,6 +9,7 @@
 
 // Callum Hay, Gaussian Blur Shader (GLSL), 3-Blog, 2010
 // http://callumhay.blogspot.ca/2010/09/gaussian-blur-shader-glsl.html
+// The incremental Gaussian calculation was taken from his shader
 
 const float sigma = 6.0;
 

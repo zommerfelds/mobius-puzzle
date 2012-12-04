@@ -64,10 +64,18 @@ AppWindow::AppWindow()
     menuLevel.items().push_back( RadioMenuElem(set_level_group, "Level _3", Gtk::AccelKey("3"),
       sigc::bind( set_level_slot, 2 ) ) );
 
+    menuAbout.items().push_back(
+            MenuElem("_Credits", Gtk::AccelKey("c"),
+                    sigc::mem_fun(*this, &AppWindow::credits)));
+    menuAbout.items().push_back(
+            MenuElem("_About", Gtk::AccelKey("a"),
+                    sigc::mem_fun(*this, &AppWindow::about)));
+
     // Set up the menu bar
     menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Application", menuApp));
     menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Level", menuLevel));
     menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Options", menuOptions));
+    menubar.items().push_back(Gtk::Menu_Helpers::MenuElem("_Info", menuAbout));
 
     // First add the vertical box as our single "top" widget
     add(vbox);
@@ -75,7 +83,7 @@ AppWindow::AppWindow()
     // Put the menubar on the top, and make it as small as possible
     vbox.pack_start(menubar, Gtk::PACK_SHRINK);
 
-    set_default_size(500, 500);
+    set_default_size(768, 768);
     vbox.pack_start(viewer);
 
     show_all();
@@ -135,4 +143,30 @@ bool AppWindow::on_key_release_event(GdkEventKey *ev) {
 
 bool AppWindow::on_key_press_event(GdkEventKey *ev) {
     return handleKey(ev);
+}
+
+void AppWindow::about() {
+    Gtk::MessageDialog dialog(*this, "About CS 488 game project",
+            false /* use_markup */, Gtk::MESSAGE_QUESTION,
+            Gtk::BUTTONS_OK);
+    dialog.set_secondary_text(
+            "Author: Christian Zommerfelds\n"
+            "Copyright (c) 2012");
+
+    dialog.run();
+}
+
+void AppWindow::credits() {
+    Gtk::MessageDialog dialog(*this, "Credits",
+            false /* use_markup */, Gtk::MESSAGE_QUESTION,
+            Gtk::BUTTONS_OK);
+    dialog.set_secondary_text(
+            "Sky box by Hazel Whorley\n"
+            "http://gamebanana.com/game/textures/327\n\n"
+            "Wheel texture by NetAlloy\n"
+            "http://www.clker.com/clipart-wheel-2.html\n\n"
+            "All other textures by Spiral Graphics Inc.\n"
+            "http://www.spiralgraphics.biz/");
+
+    dialog.run();
 }
