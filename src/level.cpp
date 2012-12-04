@@ -74,7 +74,8 @@ Vector3D BezierSegment::p(double t) const {
     return bezierPoint(t, c[0], c[1], c[2], c[3]);
 }
 
-/*Vector3D BezierSegment::n(double t) const {
+/*
+Vector3D BezierSegment::n(double t) const {
     size_t i = (t * (num()-1) + 0.5);
     assert(i >= 0);
     assert(i < num());
@@ -107,11 +108,21 @@ void BezierSegment::calcUntwisted() {
         else
             p_next = &_p[i+1];
 
+/*
+        Vector3D v1 = *p_prev-_p[i];
+        Vector3D v2 = _p[i]-*p_next;
+        v1.normalize();
+        v2.normalize();
+        _n[i] = v1.cross(v2);*/
+
         _n[i] = (*p_prev-_p[i]).cross(_p[i]-*p_next);
+        //cout << "*n[" << i << "] = " << _n[i] << endl;
         _n[i].normalize();
         if (n_old.dot(_n[i]) < 0)
             _n[i] = -_n[i];
         n_old = _n[i];
+
+        //cout << "n[" << i << "] = " << _n[i] << endl;
     }
 }
 
@@ -151,16 +162,25 @@ TSegment::TSegment(const Vector3D& start, const Vector3D& dir)
     side[0] = NULL; side[1] = NULL; side[2] = NULL; side[3] = NULL;
 }
 
+Vector3D TSegment::p(double t) const {
+    return start + t * tLenght * dir;
+}
+
 void TSegment::calc(const Vector3D& n_begin) {
     this->n_begin = n_begin;
 }
 
+bool isNear(const Vector3D& v1, const Vector3D& v2) {
+    return (v1 - v2).length2() < 0.001;
+}
+
 void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) {
-    cout << "== In calcRec ==" << endl;
+    cout << "\n== In calcRec ==" << endl;
 
     cout << "p_end = " << p_end << "; p(0) = " << seg->p((size_t)0) << endl;
 
     size_t indexStart, indexEnd;
+    size_t b;
     Segment* next, * prev;
     if ((p_end - seg->p((size_t)0)).length2() < 0.001) {
         cout << "> regular" << endl;
@@ -168,33 +188,37 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
         indexEnd = seg->num() - 1;
         next = seg->adj[1];
         prev = seg->adj[0];
+        b = 0;
     } else {
         cout << "> switched" << endl;
         indexStart = seg->num() - 1;
         indexEnd = 0;
         next = seg->adj[0];
         prev = seg->adj[1];
-        seg->switched = true;
+        b = 1;
     }
 
     if (seg->visited) {
         cout << "- already visited" << endl;
         Vector3D n_begin = seg->n(indexStart);
+        cout << "n_begin = " << n_begin << endl;
+        cout << "n_end = " << n_end << endl;
+        cout << "n_begin.dot(n_end) = " << n_begin.dot(n_end) << endl;
         double angle = acos(n_begin.dot(n_end));
         if (n_begin.cross(n_end).dot(seg->d(indexStart)) < 0) // XXX see below
             angle *= -1;
         cout << "angle: " << angle/M_PI*180 << endl;
 
         cout << "num = " << angle + M_PI*2 << "; denom = " << M_PI*0.5 << endl;
-        double mod = fmod(angle + M_PI*2 + 0.001, M_PI*0.5);
+        double mod = fmod(angle + M_PI*2 + 0.05, M_PI*0.5);
         cout << "mod = " << mod << endl;
-        if (mod > 0.01)
+        if (mod > 0.1)
             assert(0); // angles not matching
 
         double div = angle/(M_PI*0.5);
         int divI = (int)(div + 4.5) % 4;
         cout << "div = " << div << "; divI = " << divI << endl;
-        seg->sideDiff[seg->switched?1:0] = divI;
+        seg->sideDiff[b] = divI;
 
         cout << "sideDiff[0] = " << seg->sideDiff[0] << endl
              << "sideDiff[1] = " << seg->sideDiff[1] << endl;
@@ -206,10 +230,13 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
 
     seg->visited = true;
 
-    //seg->prevSideDiff = 0; // XXX
-    //seg->nextSideDiff = 0; // TODO
+    seg->switched[0] = isNear(seg->adj[0]->p((size_t)0), seg->p((size_t)0));
+    seg->switched[1] = !isNear(seg->adj[1]->p((size_t)0), seg->p(seg->num()-1));
 
-    Vector3D new_n_end;
+    cout << "switched[0] = " << seg->switched[0] << endl;
+    cout << "switched[1] = " << seg->switched[1] << endl;
+
+    Vector3D new_n_end = n_end;
 
     if (seg->getType() == BEZIER) {
         BezierSegment* bSeg = static_cast<BezierSegment*>(seg);
@@ -219,16 +246,18 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
 
         //cout << "n_begin = " << n_begin << ", n_end = " << n_end << endl;
 
-        double a_begin = acos(n_begin.dot(n_end));
+        //cout << "n_begin.dot(n_end) = " << n_begin.dot(n_end) << endl;
+        double a_begin = acos(n_begin.dot(n_end)*0.9999); // the 0.99... is for NAN problems
         if (n_begin.cross(n_end).dot(bSeg->d(indexStart)) < 0) // XXX ^ seg->switched
             a_begin *= -1;
 
-        if (seg->switched)
+        if (b == 1)
             a_begin -= bSeg->a;
 
+        cout << "a_begin = " << a_begin << endl;
         bSeg->calcTwist(a_begin);
 
-        new_n_end = bSeg->n(bSeg->num() - 1);
+        new_n_end = bSeg->n(indexEnd);
 
         //cout << "a_begin = " << a_begin << endl;
     } else if (seg->getType() == STRAIGHT) {

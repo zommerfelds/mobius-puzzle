@@ -61,15 +61,16 @@ bool AppWindow::handleKey(GdkEventKey* ev) {
     case GDK_KEY_Down:
         game.setKey(MoveBackward, pressed);
         break;
-        /*
      case GDK_KEY_Left:
-     m_game.moveLeft(); break;
+         game.setKey(MoveLeft, pressed);
+         break;
      case GDK_KEY_Right:
-     m_game.moveRight(); break;
-     case ' ':
+         game.setKey(MoveRight, pressed);
+         break;
+     /*case ' ':
      m_game.drop(); break;*/
      default:
-     return Gtk::Window::on_key_press_event( ev );
+         return Gtk::Window::on_key_press_event( ev );
      }
     //m_viewer.invalidate();
     return true;

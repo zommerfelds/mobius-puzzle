@@ -19,7 +19,7 @@ const size_t nBezierSegments = 21;
 
 class Segment {
 public:
-    Segment() : switched (false), visited (false) { adj[0] = NULL; adj[1] = NULL; }
+    Segment() : visited (false) { switched[0] = false; switched[1] = false; adj[0] = NULL; adj[1] = NULL; }
     virtual SegmentType getType() const = 0;
     virtual ~Segment() {}
 
@@ -34,13 +34,13 @@ public:
     virtual Vector3D n(double t) const;
     virtual Vector3D d(double t) const;
 
-    bool isSwitched() const { return switched; }
+    bool isSwitched(size_t i) const { return switched[i]; }
     int getSideDiff(size_t i) const { return sideDiff[i]; }
 
 private:
     int sideDiff[2];
 
-    bool switched;
+    bool switched[2];
     bool visited;
 
     friend class Level;
@@ -108,6 +108,8 @@ public:
     Vector3D n(size_t i) const { return n_begin; }
     Vector3D p(size_t i) const { if(i == 0) return start; else return start + tLenght*dir; }
     Vector3D d(size_t i) const { return dir; }
+
+    Vector3D p(double t) const;
 
     /*virtual size_t num() const { return 0; };
     virtual Vector3D p(size_t i) const;

@@ -265,8 +265,8 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
 
                 if (lightAndTex) {
                     int side = c;
-                    if (c == 1 && s.isSwitched()) side = 3;
-                    if (c == 3 && s.isSwitched()) side = 1;
+                    /*if (c == 1 && s.isSwitched()) side = 3;
+                    if (c == 3 && s.isSwitched()) side = 1;*/
                     glColor3f(colours[side].R(), colours[side].G(), colours[side].B());
                 }
 
@@ -502,15 +502,15 @@ void Viewer::drawTBlock(const TSegment& t, bool lightAndTex) {
     n = radius * n;
     e = radius * e;
 
-    q[0] = t.p(0) + n + e;
-    q[1] = t.p(0) - n + e;
-    q[2] = t.p(0) - n - e;
-    q[3] = t.p(0) + n - e;
+    q[0] = t.p((size_t)0) + n + e;
+    q[1] = t.p((size_t)0) - n + e;
+    q[2] = t.p((size_t)0) - n - e;
+    q[3] = t.p((size_t)0) + n - e;
 
-    l[0] = t.p(1) + n + e;
-    l[1] = t.p(1) - n + e;
-    l[2] = t.p(1) - n - e;
-    l[3] = t.p(1) + n - e;
+    l[0] = t.p((size_t)1) + n + e;
+    l[1] = t.p((size_t)1) - n + e;
+    l[2] = t.p((size_t)1) - n - e;
+    l[3] = t.p((size_t)1) + n - e;
 
     if (lightAndTex) {
         glEnable(GL_LIGHTING);
@@ -521,8 +521,6 @@ void Viewer::drawTBlock(const TSegment& t, bool lightAndTex) {
         glDisable(GL_TEXTURE_2D);
         glDisable(GL_LIGHTING);
     }
-
-    //glDisable(GL_TEXTURE_2D); // XXX
 
     glBegin(GL_QUADS);
 
@@ -550,7 +548,7 @@ void Viewer::drawTBlock(const TSegment& t, bool lightAndTex) {
         } else {
             Vector3D nn = t.n(0);
             nn.rotate(t.d(0), M_PI * 0.5 * i);
-            drawT(t.p(0), t.d(0), nn, lightAndTex, i);
+            drawT(t.p((size_t)0), t.d(0), nn, lightAndTex, i);
         }
     }
 
@@ -601,12 +599,13 @@ void Viewer::on_realize() {
     glEnable(GL_DEPTH_TEST);
     glClearColor(0, 0, 0, 0);
 
-    glEnable(GL_CULL_FACE); // XXX
+    glEnable(GL_CULL_FACE);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_NORMALIZE);
-    glShadeModel(GL_FLAT);
+    //glShadeModel(GL_FLAT);
+    glShadeModel(GL_SMOOTH);
     glPointSize(5);
     glEnable( GL_POINT_SMOOTH );
     //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -874,13 +873,14 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     const Segment* seg = game.getPlayerSeg();
     int side = game.getPlayerSide();
     double t = game.getPlayerT();
+    double tt = game.getPlayerTT();
 
     Vector3D n = seg->n(t);
     Vector3D d = seg->d(t);
     n.rotate(d, side*M_PI*0.5);
     Vector3D p = seg->p(t);
     Vector3D e = d.cross(n);
-    Vector3D p0 = p + 0.17 * n - 0.1*d - 0.1*e;
+    Vector3D p0 = p + 0.17 * n - 0.1*d + (tt - 0.1)*e;
 
     //glTranslated(center[0], center[1], center[2]);
     //glRotated(30, 0, 0, 1);
@@ -945,13 +945,22 @@ bool Viewer::on_button_release_event(GdkEventButton*) {
     return true;
 }
 
+double sign(double x) {
+    if (x > 0) return 1;
+    if (x < 0) return -1;
+    return 0;
+}
+
 bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
     int dx = event->x - oldX;
     int dy = event->y - oldY;
     Vector3D n = game.getPlayerSeg()->n(game.getPlayerT());
     float speed = 0.01;
     camera.rotate(n, -dx*speed);
-    camera.rotate(n.cross(camera), -dy*speed);
+    Vector3D axis2 = n.cross(camera);
+    axis2.normalize();
+    if (camera.dot(n)*sign(-dy) > -0.99)
+        camera.rotate(axis2, -dy*speed);
     camera.normalize();
     oldX = event->x;
     oldY = event->y;

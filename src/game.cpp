@@ -2,11 +2,13 @@
 #include <iostream>
 using namespace std;
 
-Game::Game() {
+Game::Game()
+: playerDir (1) {
     for (size_t i = 0; i < NUM_KEYS; i++)
         keyStates[i] = false;
 
-    /*Vector3D c1[] = { Vector3D(0, 0, 0),
+/*
+    Vector3D c1[] = { Vector3D(0, 0, 0),
                       Vector3D(1, 0, 0),
                       Vector3D(0, 1, 0),
                       Vector3D(1, 1, 0) };
@@ -22,15 +24,17 @@ Game::Game() {
     //StraightSegment* seg2 = new StraightSegment(c2, 0.1);
     //StraightSegment sSeg3(c2, 0.5);
     BezierSegment* seg3 = new BezierSegment(c3, M_PI*0.0);
-    seg1->next = seg2;
+    seg1->adj[1] = seg2;
     level.segments.push_back(seg1);
-    seg2->prev = seg1;
+    seg2->adj[0] = seg1;
     seg2->side[3] = seg3;
-    seg2->next = seg3;
+    seg2->adj[1] = seg3;
     level.segments.push_back(seg2);
-    seg3->prev = seg2;
+    seg3->adj[0] = seg2;
+    seg3->adj[1] = seg2;
     level.segments.push_back(seg3);*/
 
+    /*
     Vector3D c1[] = { Vector3D(0, 0, 0),
                       Vector3D(1, 0, 0),
                       Vector3D(1, 1, 0),
@@ -39,8 +43,36 @@ Game::Game() {
                       Vector3D(-1, 1, 0),
                       Vector3D(-1, 0, 0),
                       Vector3D(0, 0, 0) };
-    BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.25);
-    BezierSegment* seg2 = new BezierSegment(c2, M_PI*0.25);
+    BezierSegment* seg1 = new BezierSegment(c1, M_PI*0);
+    BezierSegment* seg2 = new BezierSegment(c2, M_PI*1);
+    seg1->adj[1] = seg2;
+    seg1->adj[0] = seg2;
+    seg2->adj[1] = seg1;
+    seg2->adj[0] = seg1;
+    level.segments.push_back(seg1);
+    level.segments.push_back(seg2);
+    */
+
+
+    Vector3D c1[] = { Vector3D(0, 0, 0),
+                      Vector3D(2, 0, 0),
+                      Vector3D(2, 2, 0),
+                      Vector3D(0, 2, 0) };
+
+/*
+    Vector3D c2[] = { Vector3D(-0, 0, 0),
+                      Vector3D(-2, 0, 0),
+                      Vector3D(-2, 2, 0),
+                      Vector3D( 0, 2, 0) };
+
+*/
+    Vector3D c2[] = { Vector3D(0, 2, 0),
+                      Vector3D(-1, 2, 0),
+                      Vector3D(-1, 0, 0),
+                      Vector3D(0, 0, 0) };
+
+    BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.0);
+    BezierSegment* seg2 = new BezierSegment(c2, M_PI*0.5);
     seg1->adj[1] = seg2;
     seg1->adj[0] = seg2;
     seg2->adj[1] = seg1;
@@ -48,80 +80,76 @@ Game::Game() {
     level.segments.push_back(seg1);
     level.segments.push_back(seg2);
 
-    /*
-    Vector3D c1[] = { Vector3D(0, 0, 0),
-                      Vector3D(1, 0, 0),
-                      Vector3D(2, 1, 0),
-                      Vector3D(3, 2, 0) };
-
-    Vector3D c2[] = { Vector3D(3, 4, 1),
-                      Vector3D(4, 4, 0),
-                      Vector3D(4, 3, 0),
-                      Vector3D(3, 2, 0) };
-    BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.0);
-    BezierSegment* seg2 = new BezierSegment(c2, M_PI*0.0);
-    seg1->adj[1] = seg2;
-    seg2->adj[1] = seg1;
-    level.segments.push_back(seg1);
-    level.segments.push_back(seg2);
-*/
 
     level.calc();
 
     playerSeg = seg1;
     playerT = 0.1;
     playerSide = 0;
-    playerSideT = 0;
+    playerSide2 = 0;
+    playerTT = 0.0;
 }
 
 void Game::update(double dt) {
     //cout << "Game::update()" << endl;
     double move = dt * 0.8;
-    bool curSwitched = playerSeg->isSwitched();
-    if (curSwitched)
-        move *= -1;
+    move *= playerDir;
 
     if (keyStates[MoveForward])
         playerT += move;
     else if (keyStates[MoveBackward])
         playerT -= move;
 
-    switch (playerSeg->getType()) {
-    default:
-        if (playerT > 1) {
-            if (playerSeg->adj[1] == NULL) {
+    if (playerT > 1) {
+        if (playerSeg->adj[1] == NULL) {
+            playerT = 1;
+        } else {
+            playerSide = (playerSide - playerSeg->getSideDiff(1) + 4) % 4;
+            cout << "playerSide = " << playerSide << endl;
+            cout << "playerSeg->isSwitched(1) = " << playerSeg->isSwitched(1) << endl;
+            if (playerSeg->isSwitched(1)) {
+                playerDir *= -1;
                 playerT = 1;
-            }
-            else {
-                playerSide = (playerSide - playerSeg->getSideDiff(1) + 4) % 4;
-                playerSeg = playerSeg->adj[1];
-                cout << "playerSide = " << playerSide << endl;
-                if (curSwitched ^ playerSeg->isSwitched())
-                    playerT = 1;
-                else
-                    playerT = 0;
-            }
-        }
-        else if (playerT < 0) {
-            if (playerSeg->adj[0] == NULL) {
+            } else {
                 playerT = 0;
             }
-            else {
-                playerSide = (playerSide - playerSeg->getSideDiff(0) + 4) % 4;
-                playerSeg = playerSeg->adj[0];
-                cout << "playerSide = " << playerSide << endl;
-                if (curSwitched ^ playerSeg->isSwitched())
-                    playerT = 0;
-                else
-                    playerT = 1;
-            }
+            playerTT = 0;
+            playerSeg = playerSeg->adj[1];
         }
-
-        break;
-    case T: {
-        TSegment* t = static_cast<TSegment*>(playerSeg);
-        break;
     }
+    else if (playerT < 0) {
+        if (playerSeg->adj[0] == NULL) {
+            playerT = 0;
+        } else {
+            playerSide = (playerSide - playerSeg->getSideDiff(0) + 4) % 4;
+            cout << "playerSide = " << playerSide << endl;
+            if (playerSeg->isSwitched(0)) {
+                playerDir *= -1;
+                playerT = 0;
+            } else {
+                playerT = 1;
+            }
+            playerTT = 0;
+            playerSeg = playerSeg->adj[0];
+        }
+    }
+
+    //cout << "playerT = " << playerT << endl;
+
+    if (playerSeg->getType() == T) {
+
+        if (keyStates[MoveRight])
+            playerTT += move;
+        else if (keyStates[MoveLeft])
+            playerTT -= move;
+
+        TSegment* t = static_cast<TSegment*>(playerSeg);
+
+        if (playerTT < -0.5) {
+            playerSeg = t->side[3];
+            playerT = 0;
+            playerTT = 0;
+        }
     }
 }
 
