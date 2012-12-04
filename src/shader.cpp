@@ -1,3 +1,7 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #include "shader.hpp"
 #include <cassert>
 #include <cstdio>

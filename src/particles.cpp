@@ -1,3 +1,7 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #include "particles.hpp"
 #include "level.hpp"
 #include <boost/foreach.hpp>
@@ -39,8 +43,7 @@ void ParticleSystem::makeParticle(Particle& p) {
     p.max = random01();
 }
 
-
-
+// update each particle
 void ParticleSystem::update(double dt) {
     BOOST_FOREACH(Particle& p, particles) {
         p.pos = p.pos + dt * 0.2 * p.dir;

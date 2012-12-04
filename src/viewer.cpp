@@ -8,8 +8,6 @@
 #include "level.hpp"
 #include "game.hpp"
 #include <iostream>
-//#include <GL/gl.h>
-//#include <GL/glu.h>
 #include <cassert>
 #include <algorithm>
 #include <boost/foreach.hpp>
@@ -21,7 +19,8 @@ using namespace std;
 
 namespace {
 
-// XXX
+const int vboTexWidth = 768;
+
 #define printOpenGLError() printOglError(__FILE__, __LINE__)
 
 int printOglError(const char *file, int line)
@@ -105,10 +104,6 @@ void drawParallelepiped(const Vector3D& p0, const Vector3D& v1, const Vector3D& 
   Vector3D n1 = v2.cross(v1);
   Vector3D n2 = v3.cross(v2);
   Vector3D n3 = v1.cross(v3);
-
-  //double m = max(v1.length(), max(v2.length(), v3.length()));
-
-  // comments are as if X-axis goes right, Y-axis goes away from viewer, Z-axis goes up
 
   glNormal3dv(&n1[0]);
   glTexCoord2d(0,0);
@@ -221,12 +216,12 @@ void Viewer::invalidate() {
 }
 
 Colour colours[4] = {
-#if 1
+#if 1 // different colours per side
     Colour(1, 0, 1),
     Colour(0, 1, 1),
     Colour(1, 1, 0),
     Colour(0, 1, 0)
-#else
+#else // all the same
     Colour(1, 1, 1),
     Colour(1, 1, 1),
     Colour(1, 1, 1),
@@ -256,7 +251,7 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
         Vector3D e = d.cross(n);
         e.normalize();
 
-#if 0
+#if 0   // draw normals
         glDisable(GL_LIGHTING);
         glBegin(GL_LINES);/*
         glColor3f(0, 1, 0);
@@ -303,9 +298,7 @@ void Viewer::drawCurveBlock(const Segment& s, bool lightAndTex) {
 
                     Colour& c1 = colours[c];
                     Colour& c2 = colours[(c-s.getSideDiff(1))%4];
-                    Colour colour = c1 * (1-tex0) + c2 * (tex0);
-                    //colour = c1;
-
+                    Colour colour = c1 * (1-tex0) + c2 * (tex0); // blend the colours
                     glColor3f(colour.R(), colour.G(), colour.B());
 
                     /*if (c == 1 && s.isSwitched()) side = 3;
@@ -603,10 +596,7 @@ void Viewer::drawLevel(bool lightAndTex) {
     BOOST_FOREACH(Segment* segment, game->getLevel().segments) {
         switch (segment->getType()) {
         case BEZIER:
-            //curve = static_cast<const Curve*>(static_cast<const BezierSegment*>(segment));
-            /* no break */
         case STRAIGHT:
-            //curve = static_cast<const Curve*>(static_cast<const StraightSegment*>(segment));
 
             drawCurveBlock(*segment, lightAndTex);
             break;
@@ -651,7 +641,6 @@ void Viewer::on_realize() {
     glShadeModel(GL_SMOOTH);
     glPointSize(5);
     glEnable( GL_POINT_SMOOTH );
-    //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
     glEnable (GL_BLEND);
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -716,7 +705,7 @@ void Viewer::createDrawBuffer() {
         glBindTexture(GL_TEXTURE_2D, fboTex[i]);
 
         // Give an empty image to OpenGL ( the last "0" )
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, vboTexWidth, vboTexWidth, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 
         // Poor filtering. Needed !
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -749,9 +738,6 @@ void Viewer::loadTextures() {
 
         // "Bind" the newly created texture : all future texture functions will modify this texture
         glBindTexture(GL_TEXTURE_2D, tex[i]);
-
-        // Give an empty image to OpenGL ( the last "0" )
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -992,7 +978,6 @@ void Viewer::drawRobot() {
 
             glTranslated(0, -r2/2, 0);
 
-//            glColor3f(1, 1, 0);
             glColor3f(0.1, 0.1, 0.1);
 
             glPushMatrix();
@@ -1041,10 +1026,12 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
 
     if (glow > 0) {
 
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
+        /////////////// draw first pass of blur ////////////////
+
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo[0]);
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
         glDisable(GL_TEXTURE_2D);
-        glViewport(0, 0, 512, 512);
+        glViewport(0, 0, vboTexWidth, vboTexWidth);
         //glViewport(0, 0, get_width(), get_height());
         shaderMgr.useShader(ShaderManager::defaultShader);
 
@@ -1054,36 +1041,9 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
         scene(false);
 
         printOpenGLError();
-    /*
-        GLint m_viewport[4];
-        glGetIntegerv( GL_VIEWPORT, m_viewport );
-        int width  = m_viewport[2];
-        int height =  m_viewport[3];
-
-        glBindTexture(GL_TEXTURE_2D, renderedTexture);
-
-
-        // rgb image
-        glCopyTexImage2D(GL_TEXTURE_2D,0,GL_RGB,m_viewport[0],
-                        m_viewport[1], m_viewport[2], m_viewport[3],0);
-
-        glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        char* raw_img = new char [width * height * 3];
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, raw_img);
-
-        ofstream fout ("img",ios_base::binary);
-        fout.write(raw_img, width * height * 3);
-        delete raw_img;*/
-        //exit(0);
-    /*
-        static int count = 0;
-        count++;
-        if (count == 10)
-            exit(0);*/
-
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo[1]);
-        glViewport(0, 0, 512, 512);
+        glViewport(0, 0, vboTexWidth, vboTexWidth);
         //glViewport(0, 0, get_width(), get_height());
 
         printOpenGLError();
@@ -1098,6 +1058,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
         glDisable(GL_LIGHTING);
         glEnable(GL_TEXTURE_2D);
         glActiveTexture(GL_TEXTURE0);
+
+        /////////////// draw second pass of blur ////////////////
 
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
@@ -1127,6 +1089,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, get_width(), get_height());
 
+    /////////////// draw sky box to screen ////////////////
+
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     shaderMgr.useShader(ShaderManager::defaultShader);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1138,6 +1102,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     //drawParallelepiped(Vector3D(0,0,-5), Vector3D(1,0,0), Vector3D(0,1,0), Vector3D(0,0,1));
 
     printOpenGLError();
+
+    /////////////// draw blur to screen ////////////////
 
     if (glow > 0) {
         glMatrixMode(GL_PROJECTION);
@@ -1169,6 +1135,8 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
         glEnd();
     }
 
+    /////////////// draw actual scene to screen ////////////////
+
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     shaderMgr.useShader(ShaderManager::defaultShader);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -1187,14 +1155,6 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     Vector3D e = d.cross(n);
     Vector3D p0 = p + 0.14 * n /*- 0.1*d*/ + (tt /*- 0.1*/)*e;
 
-    //glTranslated(center[0], center[1], center[2]);
-    //glRotated(30, 0, 0, 1);
-    //glColor3f(1, 1, 1);
-    //glEnable(GL_LIGHTING);
-    //glDisable(GL_TEXTURE_2D);
-    //drawCube(0.2);
-    //drawParallelepiped(p0, 0.2*d, 0.2*n, 0.2*e);
-    //drawParallelepiped(center, Vector3D(0.2,0,0), Vector3D(0,0,-0.2), Vector3D(0,0.2,0));
     glPushMatrix();
     Matrix4x4 m (
             Vector4D(d[0], n[0], e[0], p0[0]),
@@ -1203,9 +1163,7 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
             Vector4D(0, 0, 0, 1)
     );
     glMultMatrixd(m.transpose().begin());
-    //glTranslated(p0[0], p0[1], p0[2]);
     drawRobot();
-    //drawParallelepiped(Vector3D(), Vector3D(0.2,0,0), Vector3D(0,0.2,0), Vector3D(0,0,0.2));
     glPopMatrix();
 
     printOpenGLError();
@@ -1219,20 +1177,6 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     gldrawable->swap_buffers();
 
     gldrawable->gl_end();
-
-    /*
-    // update camera
-    int x, y;
-    get_pointer(x, y);
-    int dx = x - oldX;
-    int dy = y - oldY;
-    cout << "dx = " << dx << ", dy = " << dy << endl;
-    camera.rotate(n, dx*0.01);
-    camera.normalize();
-    cout << "camera: " << camera << endl;
-    oldX = x;
-    oldY = y;
-    */
 
     return true;
 }

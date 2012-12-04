@@ -1,3 +1,7 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #include "level.hpp"
 #include <iostream>
 #include <boost/foreach.hpp>
@@ -19,7 +23,7 @@ Vector3D bezierDir(float t, const Vector3D& p0, const Vector3D& p1, const Vector
     d.normalize();
     return d;
 }
-// would be nice to have as a symbolic formula
+// would be nice to have as a symbolic formula:
 // get the normal of the plane the line is lying on at a given point
 //Vector3D bezierNormal(float t, const Vector3D& p0, const Vector3D& p1, const Vector3D& p2, const Vector3D& p3);
 // (currently, it just approximates the normals by walking through the line in small steps)
@@ -74,14 +78,6 @@ Vector3D BezierSegment::p(double t) const {
     return bezierPoint(t, c[0], c[1], c[2], c[3]);
 }
 
-/*
-Vector3D BezierSegment::n(double t) const {
-    size_t i = (t * (num()-1) + 0.5);
-    assert(i >= 0);
-    assert(i < num());
-    return n(i);
-}*/
-
 Vector3D BezierSegment::d(double t) const {
     return bezierDir(t, c[0], c[1], c[2], c[3]);
 }
@@ -108,21 +104,11 @@ void BezierSegment::calcUntwisted() {
         else
             p_next = &_p[i+1];
 
-/*
-        Vector3D v1 = *p_prev-_p[i];
-        Vector3D v2 = _p[i]-*p_next;
-        v1.normalize();
-        v2.normalize();
-        _n[i] = v1.cross(v2);*/
-
         _n[i] = (*p_prev-_p[i]).cross(_p[i]-*p_next);
-        //cout << "*n[" << i << "] = " << _n[i] << endl;
         _n[i].normalize();
         if (n_old.dot(_n[i]) < 0)
             _n[i] = -_n[i];
         n_old = _n[i];
-
-        //cout << "n[" << i << "] = " << _n[i] << endl;
     }
 }
 
@@ -174,23 +160,25 @@ bool isNear(const Vector3D& v1, const Vector3D& v2) {
     return (v1 - v2).length2() < 0.001;
 }
 
+// This function is one of the core parts for the calculation of the curves
+//
 void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) {
-    cout << "\n== In calcRec ==" << endl;
+    //cout << "\n== In calcRec ==" << endl;
 
-    cout << "p_end = " << p_end << "; p(0) = " << seg->p((size_t)0) << endl;
+    //cout << "p_end = " << p_end << "; p(0) = " << seg->p((size_t)0) << endl;
 
     size_t indexStart, indexEnd;
     size_t b;
     Segment* next, * prev;
     if ((p_end - seg->p((size_t)0)).length2() < 0.001) {
-        cout << "> regular" << endl;
+        //cout << "> regular" << endl;
         indexStart = 0;
         indexEnd = seg->num() - 1;
         next = seg->adj[1];
         prev = seg->adj[0];
         b = 0;
     } else {
-        cout << "> switched" << endl;
+        //cout << "> switched" << endl;
         indexStart = seg->num() - 1;
         indexEnd = 0;
         next = seg->adj[0];
@@ -199,34 +187,34 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
     }
 
     if (seg->visited) {
-        cout << "- already visited" << endl;
+        //cout << "- already visited" << endl;
         Vector3D n_begin = seg->n(indexStart);
-        cout << "n_begin = " << n_begin << endl;
-        cout << "n_end = " << n_end << endl;
-        cout << "n_begin.dot(n_end) = " << n_begin.dot(n_end) << endl;
+        //cout << "n_begin = " << n_begin << endl;
+        //cout << "n_end = " << n_end << endl;
+        //cout << "n_begin.dot(n_end) = " << n_begin.dot(n_end) << endl;
         double angle = acos(n_begin.dot(n_end));
         if (n_begin.cross(n_end).dot(seg->d(indexStart)) < 0) // XXX see below
             angle *= -1;
-        cout << "angle: " << angle/M_PI*180 << endl;
+        //cout << "angle: " << angle/M_PI*180 << endl;
 
-        cout << "num = " << angle + M_PI*2 << "; denom = " << M_PI*0.5 << endl;
+        //cout << "num = " << angle + M_PI*2 << "; denom = " << M_PI*0.5 << endl;
         double mod = fmod(angle + M_PI*2 + 0.05, M_PI*0.5);
-        cout << "mod = " << mod << endl;
-        if (mod > 0.1)
+        //cout << "mod = " << mod << endl;
+        if (mod > 0.2)
             assert(0); // angles not matching
 
         double div = angle/(M_PI*0.5);
         int divI = (int)(div + 4.5) % 4;
-        cout << "div = " << div << "; divI = " << divI << endl;
+        //cout << "div = " << div << "; divI = " << divI << endl;
         seg->sideDiff[b] = divI;
 
-        cout << "sideDiff[0] = " << seg->sideDiff[0] << endl
-             << "sideDiff[1] = " << seg->sideDiff[1] << endl;
+        //cout << "sideDiff[0] = " << seg->sideDiff[0] << endl
+        //     << "sideDiff[1] = " << seg->sideDiff[1] << endl;
 
         return;
     }
 
-    cout << "- not visited" << endl;
+    //cout << "- not visited" << endl;
 
     seg->visited = true;
 
@@ -235,8 +223,8 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
     if (seg->adj[1])
         seg->switched[1] = !isNear(seg->adj[1]->p((size_t)0), seg->p(seg->num()-1));
 
-    cout << "switched[0] = " << seg->switched[0] << endl;
-    cout << "switched[1] = " << seg->switched[1] << endl;
+    //cout << "switched[0] = " << seg->switched[0] << endl;
+    //cout << "switched[1] = " << seg->switched[1] << endl;
 
     Vector3D new_n_end = n_end;
 
@@ -276,7 +264,7 @@ void Level::calcRec(Segment* seg, const Vector3D& n_end, const Vector3D& p_end) 
     if (next != NULL)
         calcRec(next, new_n_end, seg->p(indexEnd));
     if (prev != NULL)
-        calcRec(prev, n_end, seg->p(indexStart)); // this is just used for the first segment (where prev hasn't been visited yet)
+        calcRec(prev, n_end, seg->p(indexStart));
 }
 
 void Level::calc() {
@@ -292,48 +280,4 @@ void Level::calc() {
     Vector3D p_end = seg->p((size_t)0);
 
     calcRec(seg, n_end, p_end);
-
-    /*
-    while (seg != NULL) {
-        seg->prevSideDiff = 0;
-        seg->nextSideDiff = 0;
-        if (seg->getType() == BEZIER) {
-            BezierSegment* bSeg = static_cast<BezierSegment*>(seg);
-            bSeg->calcUntwisted();
-
-            const Vector3D& n_begin = bSeg->n((size_t)0);
-
-            if (seg->prev == NULL) {
-                n_end = n_begin;
-            }
-
-            //cout << "n_begin = " << n_begin << ", n_end = " << n_end << endl;
-
-            double a_begin = acos(n_begin.dot(n_end));
-            if (n_begin.cross(n_end).dot(bSeg->d((size_t)0)) < 0)
-                a_begin *= -1;
-
-            bSeg->calcTwist(a_begin);
-
-            n_end = bSeg->n(bSeg->num() - 1);
-
-            //cout << "a_begin = " << a_begin << endl;
-        } else if (seg->getType() == STRAIGHT) {
-            StraightSegment* sSeg = static_cast<StraightSegment*>(seg);
-            if (seg->prev == NULL) {
-                n_end = (sSeg->c[1] - sSeg->c[0]).cross(Vector3D(1,0,0));
-                cout << "WARNING: not really implemented" << endl;
-            }
-            sSeg->calc(n_end);
-        } else if (seg->getType() == T) {
-            TSegment* tSeg = static_cast<TSegment*>(seg);
-            if (seg->prev == NULL) {
-                n_end = (tSeg->dir).cross(Vector3D(1,0,0));
-                cout << "WARNING: not really implemented" << endl;
-            }
-            tSeg->calc(n_end);
-        }
-
-        seg = seg->next;
-    }*/
 }

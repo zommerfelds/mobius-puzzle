@@ -1,8 +1,11 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #ifndef LEVEL_HPP_
 #define LEVEL_HPP_
 
 #include "algebra.hpp"
-//#include <list>
 #include <vector>
 
 enum SegmentType {
@@ -63,7 +66,6 @@ public:
     Vector3D d(size_t i) const { return _d[i]; }
 
     Vector3D p(double t) const;
-    //Vector3D n(double t) const;
     Vector3D d(double t) const;
 
 private:
@@ -79,6 +81,7 @@ private:
     friend class Level;
 };
 
+// not used currently
 class StraightSegment : public TwistSegment {
 public:
     StraightSegment(const Vector3D ends[2], double a);
@@ -110,11 +113,6 @@ public:
     Vector3D d(size_t i) const { return dir; }
 
     Vector3D p(double t) const;
-
-    /*virtual size_t num() const { return 0; };
-    virtual Vector3D p(size_t i) const;
-    virtual Vector3D n(size_t i) const { return n_begin; }
-    virtual Vector3D d(size_t i) const { return _d; }*/
 
     Segment* side[4]; // each can be null
 private:

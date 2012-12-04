@@ -1,3 +1,7 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #ifndef PARTICLES_HPP_
 #define PARTICLES_HPP_
 
@@ -5,7 +9,7 @@
 
 class Level;
 
-const int numParticles = 200;
+const int numParticles = 300;
 
 class Particle {
 public:

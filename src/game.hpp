@@ -1,3 +1,7 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #include "level.hpp"
 
 enum Key {
@@ -25,12 +29,12 @@ public:
 private:
     Level level;
     Segment* playerSeg;
-    double playerT;
-    int playerSide;
-    int playerSide2;
-    double playerTT;
-    int playerDir;
-    double playerWheel;
+    double playerT;     // t of player's position
+    int playerSide;     // 0, 1, 2, 3 => which side relative to the normal
+    int playerSide2;    // for T-shapes
+    double playerTT;    // for T-shapes
+    int playerDir;      // current direction relative to the curves orientation
+    double playerWheel; // angle of the wheels
 
     bool keyStates[NUM_KEYS];
 };

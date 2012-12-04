@@ -1,3 +1,7 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 #ifndef SHADER_HPP_
 #define SHADER_HPP_
 

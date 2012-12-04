@@ -1,5 +1,8 @@
+// Name: Christian Zommerfelds
+// Student Number: 20493973
+// User-id: cgzommer
+
 // Glow shader
-// Author Christian Zommerfelds
 
 // References:
 
@@ -13,7 +16,7 @@
 
 const float sigma = 6.0;
 
-const float blurSize = 1.0 / 512.0; // This should usually be equal to
+const float blurSize = 1.0 / 768.0; // This should usually be equal to
                                     // 1.0 / texture_pixel_width for a horizontal blur, and
                                     // 1.0 / texture_pixel_height for a vertical blur.
                          
