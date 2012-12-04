@@ -57,6 +57,8 @@ private:
   void drawLevel(bool lightAndTex);
   void drawCurveBlock(const Segment& s, bool lightAndTex);
   void drawTBlock(const TSegment& t, bool lightAndTex);
+  void setProjAndModelViewMatrix();
+  void drawSkyBox();
 
   sigc::connection timerConnection;
   ShaderManager shaderMgr;
@@ -65,7 +67,7 @@ private:
 
   GLuint fbo[2];
   GLuint fboTex[2];
-  GLuint tex[1];
+  GLuint tex[7];
 
   Vector3D camera;
 

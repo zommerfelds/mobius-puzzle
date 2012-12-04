@@ -610,6 +610,9 @@ void Viewer::on_realize() {
     glEnable( GL_POINT_SMOOTH );
     //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     gldrawable->gl_end();
 
     glewInit();
@@ -652,7 +655,7 @@ void Viewer::createDrawBuffer() {
         glBindTexture(GL_TEXTURE_2D, fboTex[i]);
 
         // Give an empty image to OpenGL ( the last "0" )
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 
         // Poor filtering. Needed !
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -678,40 +681,59 @@ void Viewer::createDrawBuffer() {
 }
 
 void Viewer::loadTextures() {
-    glGenTextures(1, &tex[0]);
+    glGenTextures(7, &tex[0]);
 
-    // "Bind" the newly created texture : all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, tex[0]);
+    for (size_t i = 0; i < 7; i++) {
 
-    // Give an empty image to OpenGL ( the last "0" )
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
+        // "Bind" the newly created texture : all future texture functions will modify this texture
+        glBindTexture(GL_TEXTURE_2D, tex[i]);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        // Give an empty image to OpenGL ( the last "0" )
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 
-    ifstream file( "data/Rainbow Shards.data", ios::binary );
-    if (!file) throw runtime_error("error reading texture");
-    // copies all data into buffer
-    file.seekg (0, ios::end);
-    size_t size = file.tellg();
-    file.seekg (0, ios::beg);
-    char* buffer = new char [size];
-    file.read (buffer, size);
-    file.close();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    // Textur wird hier in die Grafikkarte geladen! Dabei werden Mipmaps generiert.
-    gluBuild2DMipmaps(GL_TEXTURE_2D,                    // 2D Textur wird geladen
-                      GL_RGB,
-                      512,     // Breite des Bildes
-                      512,    // Höhe des Bildes
-                      GL_RGB,                           // Format
-                      GL_UNSIGNED_BYTE,                 // Wie Daten aufgeschriben sind
-                      buffer);
+        string filename;
+        switch (i) {
+        case 0: filename = "data/Rainbow Shards.data"; break;
+        case 1: filename = "data/nightsky_north.data"; break;
+        case 2: filename = "data/nightsky_west.data"; break;
+        case 3: filename = "data/nightsky_south.data"; break;
+        case 4: filename = "data/nightsky_east.data"; break;
+        case 5: filename = "data/nightsky_up.data"; break;
+        case 6: filename = "data/nightsky_down.data"; break;
+        }
+        int width = 512;
+        if (i > 0)
+            width = 1024;
 
-    delete [] buffer;
+        ifstream file( filename.c_str(), ios::binary );
+        if (!file) throw runtime_error("error reading texture '" + filename + "'");
+        // copies all data into buffer
+        file.seekg (0, ios::end);
+        size_t size = file.tellg();
+        file.seekg (0, ios::beg);
+        char* buffer = new char [size];
+        file.read (buffer, size);
+        file.close();
+
+        // Textur wird hier in die Grafikkarte geladen! Dabei werden Mipmaps generiert.
+        gluBuild2DMipmaps(GL_TEXTURE_2D,                    // 2D Textur wird geladen
+                          GL_RGB,
+                          width,     // Breite des Bildes
+                          width,    // Höhe des Bildes
+                          GL_RGB,                           // Format
+                          GL_UNSIGNED_BYTE,                 // Wie Daten aufgeschriben sind
+                          buffer);
+
+        delete [] buffer;
+    }
 }
 
-void Viewer::scene(bool lightAndTex) {
+void Viewer::setProjAndModelViewMatrix() {
 
     // Set up perspective projection, using current size and aspect
     // ratio of display
@@ -745,10 +767,111 @@ void Viewer::scene(bool lightAndTex) {
               g[0], g[1], g[2],
               n[0], n[1], n[2]);
 
+}
+
+void Viewer::scene(bool lightAndTex) {
+
+    setProjAndModelViewMatrix();
+
     drawLevel(lightAndTex);
 
     if (!lightAndTex)
         particleSys.draw();
+}
+
+void Viewer::drawSkyBox() {
+
+    glDisable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+
+    static double r = 0.0;
+    r += 0.03;
+
+    double c = 0.1*sin(r) + 0.8;
+
+    glColor3f(c,c,c);
+
+    const float d = 100.0f;
+    const float t0 = 0.001;
+    const float t1 = 0.999;
+
+    glBindTexture(GL_TEXTURE_2D, tex[1]);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (t1, t1);
+    glVertex3f(d, -d, -d);
+    glTexCoord2f (t1, t0);
+    glVertex3f(d, d, -d);
+    glTexCoord2f (t0, t0);
+    glVertex3f(-d, d, -d);
+    glTexCoord2f (t0, t1);
+    glVertex3f(-d, -d, -d);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, tex[2]);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (t1, t1);
+    glVertex3f(-d, -d, -d);
+    glTexCoord2f (t1, t0);
+    glVertex3f(-d, d, -d);
+    glTexCoord2f (t0, t0);
+    glVertex3f(-d, d, d);
+    glTexCoord2f (t0, t1);
+    glVertex3f(-d, -d, d);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, tex[3]);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (t1, t1);
+    glVertex3f(-d, -d, d);
+    glTexCoord2f (t1, t0);
+    glVertex3f(-d, d, d);
+    glTexCoord2f (t0, t0);
+    glVertex3f(d, d, d);
+    glTexCoord2f (t0, t1);
+    glVertex3f(d, -d, d);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, tex[4]);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (t0, t1);
+    glVertex3f(d, -d, -d);
+    glTexCoord2f (t1, t1);
+    glVertex3f(d, -d, d);
+    glTexCoord2f (t1, t0);
+    glVertex3f(d, d, d);
+    glTexCoord2f (t0, t0);
+    glVertex3f(d, d, -d);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, tex[5]);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (t1, t0);
+    glVertex3f(-d, d, -d);
+    glTexCoord2f (t0, t0);
+    glVertex3f(d, d, -d);
+    glTexCoord2f (t0, t1);
+    glVertex3f(d, d, d);
+    glTexCoord2f (t1, t1);
+    glVertex3f(-d, d, d);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, tex[6]);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f (t1, t0);
+    glVertex3f(-d, -d, -d);
+    glTexCoord2f (t0, t0);
+    glVertex3f(-d, -d, d);
+    glTexCoord2f (t0, t1);
+    glVertex3f(d, -d, d);
+    glTexCoord2f (t1, t1);
+    glVertex3f(d, -d, -d);
+    glEnd();
 }
 
 bool Viewer::on_expose_event(GdkEventExpose*) {
@@ -846,11 +969,28 @@ bool Viewer::on_expose_event(GdkEventExpose*) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, get_width(), get_height());
 
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    shaderMgr.useShader(ShaderManager::defaultShader);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    setProjAndModelViewMatrix();
+
+    drawSkyBox();
+    //drawParallelepiped(Vector3D(0,0,-5), Vector3D(1,0,0), Vector3D(0,1,0), Vector3D(0,0,1));
+
     printOpenGLError();
 
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, 1, 0, 1);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
     shaderMgr.useShader("glowV");
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
     //glColor4f(1.0f,1.0f,0,1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
     glBindTexture(GL_TEXTURE_2D, fboTex[1]);
     glBegin(GL_QUADS);
@@ -955,6 +1095,8 @@ bool Viewer::on_motion_notify_event(GdkEventMotion* event) {
     int dx = event->x - oldX;
     int dy = event->y - oldY;
     Vector3D n = game.getPlayerSeg()->n(game.getPlayerT());
+    Vector3D d = game.getPlayerSeg()->d(game.getPlayerT());
+    n.rotate(d, M_PI * 0.5 * game.getPlayerSide());
     float speed = 0.01;
     camera.rotate(n, -dx*speed);
     Vector3D axis2 = n.cross(camera);

@@ -67,12 +67,12 @@ Game::Game()
 
 */
     Vector3D c2[] = { Vector3D(0, 2, 0),
-                      Vector3D(-1, 2, 0),
-                      Vector3D(-1, 0, 0),
+                      Vector3D(-2, 2, 0),
+                      Vector3D(-2, 0, 0),
                       Vector3D(0, 0, 0) };
 
-    BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.0);
-    BezierSegment* seg2 = new BezierSegment(c2, M_PI*0.5);
+    BezierSegment* seg1 = new BezierSegment(c1, M_PI*0.25);
+    BezierSegment* seg2 = new BezierSegment(c2, M_PI*0.25);
     seg1->adj[1] = seg2;
     seg1->adj[0] = seg2;
     seg2->adj[1] = seg1;

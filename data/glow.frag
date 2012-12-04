@@ -73,7 +73,7 @@ void main() {
 	
 	avgValue = sqrt(avgValue);
 	
-  gl_FragColor = vec4(avgValue, avgValue*0.8, avgValue*0.8, 1.0);
+  gl_FragColor = vec4(avgValue, avgValue*0.8, avgValue*0.8, avgValue);
   
   //gl_FragColor = texture2D(blurSampler, gl_TexCoord[0].xy);
   
