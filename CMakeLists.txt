@@ -16,7 +16,7 @@ link_directories(${GLEXT_LIBRARY_DIRS})
 
 find_package(GLEW)
 
-set(BOOST_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+#set(BOOST_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
