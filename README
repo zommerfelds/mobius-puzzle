@@ -1,57 +1,10 @@
-Name: Christian G. Zommerfelds
-Student Number: 20493973
-User-id: cgzommer
-Assignment: 5
+Möbius Puzzle Game
+===
 
-The final executable was compiled on this machine: gl11
+Quick compile and run:
 
-How to invoke my program: 
-./game
+`cmake .`
 
-How to use my extra features: 
-Click on the according menu entries to see the effect.
-Game controls: arrow keys
-More in docs/Report.pdf
+`make`
 
-I have created the following data files, which are in the data directory:
-- data/*.data: Raw image file in RGB formal generated from the images in data/orig/
-- data/orig/*: All textures in more common formats. I didn't create them but their licence
-               allows me to use them. See data/orig/credits for credits and licences.
-
-Also in the data directory:
-- data/glow.frag: Glow fragment shader
-- data/glow.vert: Glow vertex shader
-
-My program assumes the following: 
-
-
-Objectives:
-
-1)  The main robot, small robots and other game objects have been modeled and display correctly.
-    Each little robot has unique shading.
-    
-2)  Animation of the main and small robots are displayed correctly and are triggered by the
-    player’s according actions. At least three different animated actions have been created.
-    
-3)  Implementation of the floating object data structure using 3D Bézier curves. Rendering of
-    the generated mesh works. Joints are generated and look smooth. Game can load and generate
-    the floating objects (i.e., the level) from different level files.
-    
-4)  Player can twist the floating object around its own axis in real-time at specific positions
-    in the level. The object looks solid and does not shrink.
-    
-5)  Texture mapping on the main floating object is rendered with different appearance on each side.
-    Smooth texture transitions are implemented when two sides with different appearance meet.
-    
-6)  Particle system works and produces the desired surrealistic effect on the floating object.
-
-7)  Third person view that follows the orientation of the player works. Mouse can be used to rotate
-    view around player. A texture background is rendered using a sky box or sky dome.
-    
-8)  A glow effect is visible around the floating object. It can be turned on and off and glowing
-    properties like size should are modifiable in the menu.
-    
-9)  The motion blur shader produces blur when objects move rapidly. User can deactivate or increase
-    the effect of the shader.
-    
-10) Sounds play at the right time and ambiance music is present.
+`./game`
