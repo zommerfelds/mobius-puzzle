@@ -9,6 +9,7 @@ Requirements:
 
 * CMake
 * Boost
+* glew
 * gtkmm
 * gtkglextmm
 
