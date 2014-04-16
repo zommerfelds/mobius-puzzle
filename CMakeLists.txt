@@ -5,12 +5,12 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-find")
 
 find_package(PkgConfig)
 # GTKMM
-pkg_check_modules(GTKMM gtkmm-2.4)
+pkg_check_modules(GTKMM REQUIRED gtkmm-2.4)
 include_directories(${GTKMM_INCLUDE_DIRS})
 link_directories(${GTKMM_LIBRARY_DIRS})
 
 # GTKGLEXTMM
-pkg_check_modules(GLEXT gtkglextmm-1.2)
+pkg_check_modules(GLEXT REQUIRED gtkglextmm-1.2)
 include_directories(${GLEXT_INCLUDE_DIRS})
 link_directories(${GLEXT_LIBRARY_DIRS})
 
@@ -19,8 +19,6 @@ find_package(GLEW)
 #set(BOOST_INCLUDEDIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
-
-#find_package( Boost REQUIRED COMPONENTS program_options regex )
 
 set(CMAKE_CXX_FLAGS "-g -Wall")
 
