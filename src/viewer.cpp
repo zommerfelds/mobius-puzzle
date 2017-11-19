@@ -186,7 +186,7 @@ Viewer::Viewer(Game& game)
     //  - double-buffered rendering to avoid tearing/flickering
     glconfig = Gdk::GL::Config::create(
             Gdk::GL::MODE_RGB | Gdk::GL::MODE_DEPTH | Gdk::GL::MODE_DOUBLE);
-    if (glconfig == 0) {
+    if (!glconfig) {
         // If we can't get this configuration, die
         std::cerr << "Unable to setup OpenGL Configuration!" << std::endl;
         abort();
